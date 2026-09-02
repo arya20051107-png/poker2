@@ -3,177 +3,68 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大老二 (Big Two) - 台灣正宗規則版</title>
+    <title>大老二 (Big Two) - 完整競技版</title>
     <style>
         body {
-            background-color: #277714;
-            color: white;
+            background-color: #277714; color: white;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            text-align: center;
-            margin: 0;
-            padding: 10px;
-            display: flex;
-            flex-direction: column;
-            height: 100vh;
-            box-sizing: border-box;
-            overflow: hidden;
+            text-align: center; margin: 0; padding: 10px;
+            display: flex; flex-direction: column; height: 100vh;
+            box-sizing: border-box; overflow: hidden;
         }
-        #top-bar {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 10px;
-        }
+        #top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         h2 { margin: 0; font-size: 18px; }
         
-        /* 遊戲大廳 */
         #lobby {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            flex-grow: 1;
-            background: rgba(0, 0, 0, 0.4);
-            border-radius: 15px;
-            padding: 20px;
-            margin: auto;
-            max-width: 400px;
-            width: 100%;
-            box-sizing: border-box;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            flex-grow: 1; background: rgba(0, 0, 0, 0.4); border-radius: 15px; padding: 20px;
+            margin: auto; max-width: 400px; width: 100%; box-sizing: border-box;
         }
-        #lobby input {
-            padding: 12px;
-            font-size: 18px;
-            border-radius: 8px;
-            border: none;
-            margin-bottom: 15px;
-            width: 80%;
-            text-align: center;
-        }
+        #lobby input { padding: 12px; font-size: 18px; border-radius: 8px; border: none; margin-bottom: 15px; width: 80%; text-align: center; }
 
-        #game-board {
-            flex-grow: 1;
-            display: flex;
-            flex-direction: column;
-            justify-content: space-between;
-        }
+        #game-board { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
         
-        /* 多人對手區 (迷你牌) */
-        #opponents-area {
-            display: flex;
-            justify-content: space-around;
-            width: 100%;
-            margin-bottom: 5px;
-        }
-        .opponent-box {
-            background: rgba(0,0,0,0.2);
-            padding: 5px 10px;
-            border-radius: 10px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            transition: 0.3s;
-            border: 2px solid transparent;
-        }
-        .opponent-box.active {
-            border: 2px solid #ffcc00;
-            background: rgba(255, 204, 0, 0.2);
-            box-shadow: 0 0 10px #ffcc00;
-        }
+        #opponents-area { display: flex; justify-content: space-around; width: 100%; margin-bottom: 5px; }
+        .opponent-box { background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; transition: 0.3s; border: 2px solid transparent; }
+        .opponent-box.active { border: 2px solid #ffcc00; background: rgba(255, 204, 0, 0.2); box-shadow: 0 0 10px #ffcc00; }
+        .opponent-box.afk { border: 2px solid #ff5555; background: rgba(255, 0, 0, 0.2); opacity: 0.8; }
         .opp-name { font-size: 12px; font-weight: bold; margin-bottom: 5px; }
         .opp-hand-mini { display: flex; }
-        .mini-card {
-            width: 20px;
-            height: 30px;
-            background-color: #b22222;
-            background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.1) 4px, rgba(255,255,255,0.1) 8px);
-            border: 1px solid #777;
-            border-radius: 3px;
-            margin-left: -12px;
-            box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
-        }
+        .mini-card { width: 20px; height: 30px; background-color: #b22222; background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.1) 4px, rgba(255,255,255,0.1) 8px); border: 1px solid #777; border-radius: 3px; margin-left: -12px; box-shadow: -1px 1px 2px rgba(0,0,0,0.5); }
         .mini-card:first-child { margin-left: 0; }
         
-        /* 出牌區 */
-        #play-area {
-            flex-grow: 1;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            border: 2px dashed rgba(255,255,255,0.3);
-            border-radius: 10px;
-            margin: 5px 0;
-            min-height: 100px;
-            background: rgba(0,0,0,0.1);
-        }
+        #play-area { flex-grow: 1; display: flex; justify-content: center; align-items: center; border: 2px dashed rgba(255,255,255,0.3); border-radius: 10px; margin: 5px 0; min-height: 100px; background: rgba(0,0,0,0.1); position: relative; }
         
-        /* 卡牌共用樣式 */
-        .card {
-            width: 60px;
-            height: 90px;
-            background-color: white;
-            border: 1px solid #999;
-            border-radius: 6px;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            font-size: 20px;
-            font-weight: bold;
-            color: black;
-            cursor: pointer;
-            box-shadow: -2px 2px 5px rgba(0,0,0,0.3);
-            transition: transform 0.2s, margin 0.2s;
-            user-select: none;
-            flex-shrink: 0;
-            position: relative;
-        }
+        .card { width: 60px; height: 90px; background-color: white; border: 1px solid #999; border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: black; cursor: pointer; box-shadow: -2px 2px 5px rgba(0,0,0,0.3); transition: transform 0.2s, margin 0.2s; user-select: none; flex-shrink: 0; position: relative; }
         .card.red { color: #d32f2f; }
         .card:hover { transform: translateY(-10px); z-index: 10; }
-        .card.selected {
-            transform: translateY(-20px) !important;
-            border: 2px solid #ffcc00;
-            box-shadow: 0 0 10px #ffcc00;
-            z-index: 20;
-        }
+        .card.selected { transform: translateY(-20px) !important; border: 2px solid #ffcc00; box-shadow: 0 0 10px #ffcc00; z-index: 20; }
         
-        /* 出牌區的牌展開 */
         #play-area .card { margin-left: -15px; }
         #play-area .card:first-child { margin-left: 0; }
 
-        /* 玩家手牌區 - 支援左右滑動 */
-        .my-hand-container {
-            width: 100%;
-            overflow-x: auto;
-            -webkit-overflow-scrolling: touch; /* 手機端順暢滑動 */
-            padding-bottom: 5px;
-        }
-        /* 隱藏原生捲軸讓畫面更美觀 */
+        .my-hand-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 5px; }
         .my-hand-container::-webkit-scrollbar { height: 6px; }
         .my-hand-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
         
-        #my-hand {
-            display: inline-flex;
-            padding: 30px 15px 15px 15px; /* 上方預留牌浮起的空間 */
-        }
-        #my-hand .card { margin-left: -20px; } /* 減少重疊，確保手機好點擊 */
+        #my-hand { display: inline-flex; padding: 25px 15px 10px 15px; }
+        #my-hand .card { margin-left: -20px; }
         #my-hand .card:first-child { margin-left: 0; }
 
-        #controls { margin-bottom: 10px; }
-        button {
-            padding: 8px 16px;
-            font-size: 15px;
-            margin: 0 5px;
-            cursor: pointer;
-            border: none;
-            border-radius: 6px;
-            background-color: #ffcc00;
-            color: #333;
-            font-weight: bold;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
-        }
+        #controls { margin-bottom: 5px; display: flex; justify-content: center; align-items: center; gap: 10px;}
+        button { padding: 8px 16px; font-size: 15px; cursor: pointer; border: none; border-radius: 6px; background-color: #ffcc00; color: #333; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         button:disabled { background-color: #666; color: #999; cursor: not-allowed; box-shadow: none; }
         .btn-danger { background-color: #dc3545; color: white; padding: 6px 12px; font-size: 13px; }
-        #status-msg { font-size: 15px; font-weight: bold; color: #ffeb3b; margin-bottom: 8px; }
+        
+        #status-msg { font-size: 15px; font-weight: bold; color: #ffeb3b; margin-bottom: 5px; }
+        #timer-display { font-size: 18px; font-weight: bold; color: #ff5555; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 5px; }
+
+        /* 託管遮罩層 */
+        #afk-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; flex-direction: column; justify-content: center; align-items: center; border-radius: 10px; }
+        #afk-overlay h1 { color: #ff5555; }
+        
+        /* 觀戰提示 */
+        #spectator-banner { display: none; background: rgba(0, 150, 255, 0.8); padding: 5px; border-radius: 5px; margin-bottom: 5px; font-weight: bold; }
 
         @media (max-width: 600px) {
             .card { width: 55px; height: 80px; font-size: 18px; }
@@ -184,30 +75,38 @@
 <body>
 
     <div id="top-bar">
-        <h2 id="room-display">大老二對戰 (2~4人)</h2>
+        <h2 id="room-display">大老二競技場</h2>
         <button id="btn-reset" class="btn-danger" style="display:none;">離開房間</button>
     </div>
     
+    <div id="spectator-banner">👁️ 觀戰模式：等待本局結束後將為您安排座位...</div>
     <div id="status-msg">系統初始化中...</div>
 
     <div id="lobby">
         <h3 style="margin-top:0;">建立或加入房間</h3>
-        <input type="text" id="room-input" placeholder="請輸入自訂房間號碼" maxlength="10">
-        <button id="btn-join" disabled>進入房間</button>
+        <input type="text" id="room-input" placeholder="請輸入房號 (如: 666)" maxlength="10">
+        <button id="btn-join" disabled>進入對戰</button>
     </div>
 
     <div id="game-board" style="display:none;">
-        <div id="opponents-area"></div>
+        <!-- 託管遮罩 -->
+        <div id="afk-overlay">
+            <h1>🤖 系統託管中</h1>
+            <p>超過 15 秒無動作，系統已接管您的手牌。</p>
+            <button id="btn-cancel-afk" style="padding: 12px 24px; font-size: 18px; background: #4CAF50; color: white;">回來玩！取消託管</button>
+        </div>
 
+        <div id="opponents-area"></div>
         <div id="play-area"></div>
 
-        <div>
+        <div id="my-play-area">
             <div id="controls">
+                <span id="timer-display" style="display:none;">⏳ 15s</span>
                 <button id="btn-play" disabled>出牌</button>
                 <button id="btn-pass" disabled>Pass</button>
                 <button id="btn-start" style="display:none;">開始新局</button>
             </div>
-            <div style="font-size: 13px; margin-bottom: 3px;">你的牌 (可左右滑動)</div>
+            <div style="font-size: 13px; margin-bottom: 3px;" id="hand-label">你的牌 (左右滑動)</div>
             <div class="my-hand-container">
                 <div id="my-hand"></div>
             </div>
@@ -238,67 +137,52 @@
         let gameState = null;
         let selectedCards = [];
         let unsubscribe = null;
+        let clockInterval = null;
 
-        const statusMsg = document.getElementById('status-msg');
-        const lobbyDiv = document.getElementById('lobby');
-        const roomInput = document.getElementById('room-input');
-        const btnJoin = document.getElementById('btn-join');
-        const gameBoard = document.getElementById('game-board');
-        const myHandDiv = document.getElementById('my-hand');
-        const opponentsAreaDiv = document.getElementById('opponents-area');
-        const playAreaDiv = document.getElementById('play-area');
-        const btnPlay = document.getElementById('btn-play');
-        const btnPass = document.getElementById('btn-pass');
-        const btnStart = document.getElementById('btn-start');
-        const btnReset = document.getElementById('btn-reset');
-        const roomDisplay = document.getElementById('room-display');
+        const ui = {
+            statusMsg: document.getElementById('status-msg'),
+            lobby: document.getElementById('lobby'),
+            roomInput: document.getElementById('room-input'),
+            btnJoin: document.getElementById('btn-join'),
+            gameBoard: document.getElementById('game-board'),
+            myHand: document.getElementById('my-hand'),
+            opponentsArea: document.getElementById('opponents-area'),
+            playArea: document.getElementById('play-area'),
+            btnPlay: document.getElementById('btn-play'),
+            btnPass: document.getElementById('btn-pass'),
+            btnStart: document.getElementById('btn-start'),
+            btnReset: document.getElementById('btn-reset'),
+            roomDisplay: document.getElementById('room-display'),
+            timerDisplay: document.getElementById('timer-display'),
+            afkOverlay: document.getElementById('afk-overlay'),
+            btnCancelAfk: document.getElementById('btn-cancel-afk'),
+            spectatorBanner: document.getElementById('spectator-banner'),
+            myPlayArea: document.getElementById('my-play-area')
+        };
 
-        // 台灣大老二權重設定：花色 ♣♦♥♠ (0~3)，數字 3~2 (0~12)
         const suits = ['♣', '♦', '♥', '♠'];
         const ranks = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'];
 
-        // 台灣傳統大老二牌型判斷邏輯
         function analyzeHand(cards) {
             if (!cards || cards.length === 0) return null;
             let sorted = [...cards].sort((a, b) => a.value - b.value);
             let len = sorted.length;
-            
-            // 單張
             if (len === 1) return { type: 1, subType: 0, power: sorted[0].value };
-            // 一對
             if (len === 2) {
                 if (sorted[0].rank === sorted[1].rank) return { type: 2, subType: 0, power: sorted[1].value };
                 return null;
             }
-            // 五張牌型
             if (len === 5) {
                 let isFlush = sorted.every(c => c.suit === sorted[0].suit);
                 let r = sorted.map(c => ranks.indexOf(c.rank)).sort((a,b) => a-b);
+                let isStraight = false, straightPower = -1;
                 
-                let isStraight = false;
-                let straightPower = -1;
-                
-                // 一般順子 (34567 ~ 10JQKA)
-                if (r[4] - r[0] === 4 && new Set(r).size === 5) {
-                    isStraight = true;
-                    straightPower = sorted[4].value;
-                }
-                // 特例: A2345 (A=11, 2=12, 3=0, 4=1, 5=2)
-                else if (r[0]===0 && r[1]===1 && r[2]===2 && r[3]===11 && r[4]===12) {
-                    isStraight = true;
-                    straightPower = sorted.find(c => c.rank === '2').value;
-                }
-                // 特例: 23456 (2=12, 3=0, 4=1, 5=2, 6=3)
-                else if (r[0]===0 && r[1]===1 && r[2]===2 && r[3]===3 && r[4]===12) {
-                    isStraight = true;
-                    straightPower = sorted.find(c => c.rank === '2').value;
-                }
+                if (r[4] - r[0] === 4 && new Set(r).size === 5) { isStraight = true; straightPower = sorted[4].value; }
+                else if (r[0]===0 && r[1]===1 && r[2]===2 && r[3]===11 && r[4]===12) { isStraight = true; straightPower = sorted.find(c => c.rank === '2').value; }
+                else if (r[0]===0 && r[1]===1 && r[2]===2 && r[3]===3 && r[4]===12) { isStraight = true; straightPower = sorted.find(c => c.rank === '2').value; }
 
-                // 鐵支 (4+1)
                 let isFour = (r[0]===r[3]) || (r[1]===r[4]);
                 let fourPower = isFour ? (r[0]===r[3] ? sorted[3].value : sorted[4].value) : -1;
-                
-                // 葫蘆 (3+2)
                 let isFullHouse = (r[0]===r[1] && r[1]===r[2] && r[3]===r[4]) || (r[0]===r[1] && r[2]===r[3] && r[3]===r[4]);
                 let fullHousePower = isFullHouse ? (r[2]===r[0] ? sorted[2].value : sorted[4].value) : -1;
 
@@ -308,177 +192,219 @@
                 if (isFlush) return { type: 5, subType: 2, power: sorted[4].value, name: "同花" };
                 if (isStraight) return { type: 5, subType: 1, power: straightPower, name: "順子" };
             }
-            return null; // 不合法的牌型
+            return null; 
         }
 
         signInAnonymously(auth).then((userCred) => {
             myUid = userCred.user.uid;
-            btnJoin.disabled = false;
-            statusMsg.innerText = "登入成功！請輸入房間號碼。";
-        }).catch(err => {
-            statusMsg.innerText = "登入失敗，請重新整理網頁。";
-        });
+            ui.btnJoin.disabled = false;
+            ui.statusMsg.innerText = "登入成功！";
+        }).catch(err => { ui.statusMsg.innerText = "登入失敗，請重整網頁。"; });
 
-        btnJoin.onclick = () => {
-            const roomId = roomInput.value.trim();
+        ui.btnJoin.onclick = () => {
+            const roomId = ui.roomInput.value.trim();
             if (!roomId) return alert("請輸入房間號碼！");
             
             currentRoomId = `room_${roomId}`;
-            lobbyDiv.style.display = 'none';
-            btnReset.style.display = 'inline-block';
-            roomDisplay.innerText = `房間：${roomId}`;
-            statusMsg.innerText = `進入房間 [${roomId}] 中...`;
+            ui.lobby.style.display = 'none';
+            ui.btnReset.style.display = 'inline-block';
+            ui.roomDisplay.innerText = `房間：${roomId}`;
+            ui.statusMsg.innerText = `連線中...`;
             connectToRoom();
         };
 
-        btnReset.onclick = () => {
+        ui.btnReset.onclick = () => { leaveRoom(); };
+
+        function leaveRoom() {
             if(unsubscribe) unsubscribe();
-            currentRoomId = null;
-            gameState = null;
-            gameBoard.style.display = 'none';
-            btnReset.style.display = 'none';
-            lobbyDiv.style.display = 'flex';
-            roomDisplay.innerText = "大老二對戰 (2~4人)";
-            statusMsg.innerText = "已離開房間。";
-        };
+            if(clockInterval) clearInterval(clockInterval);
+            currentRoomId = null; gameState = null;
+            ui.gameBoard.style.display = 'none';
+            ui.btnReset.style.display = 'none';
+            ui.lobby.style.display = 'flex';
+            ui.spectatorBanner.style.display = 'none';
+            ui.roomDisplay.innerText = "大老二競技場";
+            ui.statusMsg.innerText = "已離開房間。";
+        }
 
         async function connectToRoom() {
             const roomRef = doc(db, "games", currentRoomId);
-            unsubscribe = onSnapshot(roomRef, (snapshot) => {
+            unsubscribe = onSnapshot(roomRef, async (snapshot) => {
                 if (!snapshot.exists()) {
-                    setDoc(roomRef, { players: [myUid], status: 'waiting' });
+                    await setDoc(roomRef, { players: [myUid], spectators: [], status: 'waiting', lastActionTime: Date.now(), afkPlayers: [] });
                 } else {
                     gameState = snapshot.data();
-                    handleGameStateChange(roomRef);
+                    await handleGameStateChange(roomRef);
                 }
             });
+            startHeartbeat();
         }
 
         async function handleGameStateChange(roomRef) {
             let players = gameState.players || [];
+            let spectators = gameState.spectators || [];
             
-            if (!players.includes(myUid)) {
-                if (gameState.status === 'waiting' && players.length < 4) {
+            // 房間超時判定 (2分鐘無動作自動解散)
+            const now = Date.now();
+            if (gameState.lastActionTime && now - gameState.lastActionTime > 120000) {
+                alert("房間閒置過久，系統已自動解散並清出座位！");
+                await setDoc(roomRef, { players: [], spectators: [], status: 'waiting', lastActionTime: Date.now(), afkPlayers: [] });
+                leaveRoom();
+                return;
+            }
+
+            // 身分判定與加入邏輯
+            if (!players.includes(myUid) && !spectators.includes(myUid)) {
+                if (gameState.status === 'playing') {
+                    spectators.push(myUid); // 戰鬥中加入，轉為觀戰
+                    await setDoc(roomRef, { ...gameState, spectators });
+                    return;
+                } else if (players.length < 4) {
                     players.push(myUid);
-                    await setDoc(roomRef, { ...gameState, players: players });
+                    await setDoc(roomRef, { ...gameState, players });
                     return;
                 } else {
-                    statusMsg.innerText = "⚠️ 房間已滿或遊戲已開始。";
-                    gameBoard.style.display = 'none';
+                    ui.statusMsg.innerText = "⚠️ 房間已滿。";
+                    leaveRoom();
                     return;
                 }
             }
+            
+            // 觀戰者遞補邏輯 (遊戲結束回到 waiting 時)
+            if (gameState.status === 'waiting' && spectators.includes(myUid) && players.length < 4) {
+                spectators = spectators.filter(id => id !== myUid);
+                players.push(myUid);
+                await setDoc(roomRef, { ...gameState, players, spectators });
+                return;
+            }
 
-            gameBoard.style.display = 'flex';
+            ui.gameBoard.style.display = 'flex';
+            let isSpectator = spectators.includes(myUid);
+            ui.spectatorBanner.style.display = isSpectator ? 'block' : 'none';
+            ui.myPlayArea.style.display = isSpectator ? 'none' : 'block';
 
             if (gameState.status === 'waiting') {
-                statusMsg.innerText = `目前 ${players.length}/4 人。`;
-                if (players[0] === myUid && players.length >= 2) {
-                    btnStart.style.display = 'inline-block';
-                    statusMsg.innerText += " 房主隨時可以開始！";
+                ui.timerDisplay.style.display = 'none';
+                ui.statusMsg.innerText = `目前 ${players.length}/4 人 (觀戰: ${spectators.length}人)`;
+                if (!isSpectator && players[0] === myUid && players.length >= 2) {
+                    ui.btnStart.style.display = 'inline-block';
+                    ui.statusMsg.innerText += " 房主可開始！";
                 } else {
-                    btnStart.style.display = 'none';
-                    statusMsg.innerText += (players[0] === myUid) ? " (至少需2人)" : " (等待房主開始)";
+                    ui.btnStart.style.display = 'none';
+                    ui.statusMsg.innerText += (!isSpectator && players[0] === myUid) ? " (需2人)" : " (等房主開局)";
                 }
             } else if (gameState.status === 'playing') {
-                btnStart.style.display = 'none';
-                renderGame();
+                ui.btnStart.style.display = 'none';
+                ui.timerDisplay.style.display = 'inline-block';
+                renderGame(isSpectator);
             }
         }
 
-        btnStart.onclick = async () => {
+        ui.btnStart.onclick = async () => {
             let deck = [];
-            for(let s=0; s<4; s++) {
-                for(let r=0; r<13; r++) {
-                    deck.push({suit: suits[s], rank: ranks[r], value: r*4 + s}); // value (0~51) 決定大小
-                }
-            }
+            for(let s=0; s<4; s++) for(let r=0; r<13; r++) deck.push({suit: suits[s], rank: ranks[r], value: r*4 + s});
             deck.sort(() => Math.random() - 0.5);
 
             const numPlayers = gameState.players.length;
-            const cardsPerPlayer = 13;
             const hands = {};
             
+            let minVal = 999;
+            let firstTurnPlayer = gameState.players[0];
+
             for(let i=0; i < numPlayers; i++) {
-                hands[gameState.players[i]] = deck.slice(i * cardsPerPlayer, (i + 1) * cardsPerPlayer).sort((a,b) => a.value - b.value);
+                let pUid = gameState.players[i];
+                hands[pUid] = deck.slice(i * 13, (i + 1) * 13).sort((a,b) => a.value - b.value);
+                
+                // 尋找最小牌 (優先尋找梅花3) 來決定誰先出
+                let pMinVal = Math.min(...hands[pUid].map(c => c.value));
+                if (pMinVal < minVal) {
+                    minVal = pMinVal;
+                    firstTurnPlayer = pUid;
+                }
             }
 
             await setDoc(doc(db, "games", currentRoomId), {
                 ...gameState,
                 status: 'playing',
                 hands: hands,
-                currentTurn: gameState.players[0],
+                currentTurn: firstTurnPlayer,
                 lastPlayed: [],
-                lastPlayer: null
+                lastPlayer: null,
+                lastActionTime: Date.now(),
+                afkPlayers: []
             });
         };
 
-        function renderGame() {
-            const isMyTurn = gameState.currentTurn === myUid;
-            statusMsg.innerText = isMyTurn ? "👉 換你出牌了！" : "⏳ 等待其他玩家...";
+        function renderGame(isSpectator) {
+            const isMyTurn = (!isSpectator && gameState.currentTurn === myUid);
+            let afkPlayers = gameState.afkPlayers || [];
             
-            btnPlay.disabled = !isMyTurn;
-            btnPass.disabled = !isMyTurn || gameState.lastPlayer === myUid || gameState.lastPlayed.length === 0;
+            if (isSpectator) {
+                ui.statusMsg.innerText = `目前輪到 玩家 ${gameState.players.indexOf(gameState.currentTurn) + 1} 出牌`;
+            } else {
+                ui.statusMsg.innerText = isMyTurn ? "👉 換你出牌了！" : "⏳ 等待對手...";
+                ui.btnPlay.disabled = !isMyTurn;
+                ui.btnPass.disabled = !isMyTurn || gameState.lastPlayer === myUid || gameState.lastPlayed.length === 0;
+            }
 
-            const myCards = (gameState.hands && gameState.hands[myUid]) ? gameState.hands[myUid] : [];
+            // 處理 AFK 介面遮罩
+            if (afkPlayers.includes(myUid)) {
+                ui.afkOverlay.style.display = 'flex';
+            } else {
+                ui.afkOverlay.style.display = 'none';
+            }
+
+            const myCards = (!isSpectator && gameState.hands && gameState.hands[myUid]) ? gameState.hands[myUid] : [];
             
-            opponentsAreaDiv.innerHTML = '';
+            ui.opponentsArea.innerHTML = '';
             gameState.players.forEach((pUid, index) => {
-                if(pUid === myUid) return; 
+                if(pUid === myUid && !isSpectator) return; 
                 
                 let oppCardsCount = (gameState.hands && gameState.hands[pUid]) ? gameState.hands[pUid].length : 0;
                 let isActive = gameState.currentTurn === pUid;
+                let isAfk = afkPlayers.includes(pUid);
                 
                 let oppDiv = document.createElement('div');
-                oppDiv.className = `opponent-box ${isActive ? 'active' : ''}`;
+                oppDiv.className = `opponent-box ${isActive ? 'active' : ''} ${isAfk ? 'afk' : ''}`;
                 
-                let nameHtml = `<div class="opp-name">玩家 ${index + 1} ${isActive ? '🔥' : ''}</div>`;
+                let nameHtml = `<div class="opp-name">玩家 ${index + 1} ${isActive ? '🔥' : ''} ${isAfk ? '[託管]' : ''}</div>`;
                 let miniHandHtml = `<div class="opp-hand-mini">`;
-                for(let i=0; i<oppCardsCount; i++){
-                    miniHandHtml += `<div class="mini-card"></div>`;
-                }
+                for(let i=0; i<oppCardsCount; i++) miniHandHtml += `<div class="mini-card"></div>`;
                 miniHandHtml += `</div>`;
                 
                 oppDiv.innerHTML = nameHtml + miniHandHtml + `<div style="font-size:11px; margin-top:2px;">${oppCardsCount} 張</div>`;
-                opponentsAreaDiv.appendChild(oppDiv);
+                ui.opponentsArea.appendChild(oppDiv);
             });
 
-            myHandDiv.innerHTML = '';
+            ui.myHand.innerHTML = '';
             selectedCards = [];
             myCards.forEach(card => {
                 let cardDiv = createCardElement(card);
                 cardDiv.onclick = () => {
-                    if(!isMyTurn) return;
+                    if(!isMyTurn || afkPlayers.includes(myUid)) return;
                     cardDiv.classList.toggle('selected');
-                    if (cardDiv.classList.contains('selected')) {
-                        selectedCards.push(card);
-                    } else {
-                        selectedCards = selectedCards.filter(c => c.value !== card.value);
-                    }
+                    if (cardDiv.classList.contains('selected')) selectedCards.push(card);
+                    else selectedCards = selectedCards.filter(c => c.value !== card.value);
                 };
-                myHandDiv.appendChild(cardDiv);
+                ui.myHand.appendChild(cardDiv);
             });
 
-            playAreaDiv.innerHTML = '';
-            if (gameState.lastPlayer === myUid && isMyTurn) {
-                playAreaDiv.innerHTML = '<span style="color:#ffcc00; font-weight:bold;">大家都 Pass！<br>請出任意牌型</span>';
+            ui.playArea.innerHTML = '';
+            if (gameState.lastPlayer === gameState.currentTurn && isActiveTurnReady()) {
+                ui.playArea.innerHTML = '<span style="color:#ffcc00; font-weight:bold;">大家都 Pass！<br>新回合自由出牌</span>';
             } else if (gameState.lastPlayed && gameState.lastPlayed.length > 0) {
-                gameState.lastPlayed.forEach(card => {
-                    playAreaDiv.appendChild(createCardElement(card));
-                });
+                gameState.lastPlayed.forEach(card => ui.playArea.appendChild(createCardElement(card)));
             } else {
-                playAreaDiv.innerHTML = '<span style="color:#aaa;">等待出牌</span>';
+                ui.playArea.innerHTML = '<span style="color:#aaa;">首局先出</span>';
             }
 
             if (gameState.hands && Object.keys(gameState.hands).length > 0) {
                 let winnerIndex = gameState.players.findIndex(p => gameState.hands[p] && gameState.hands[p].length === 0);
                 if (winnerIndex !== -1) {
-                    if (gameState.players[winnerIndex] === myUid) {
-                        statusMsg.innerText = "🏆 恭喜！你贏了！";
-                    } else {
-                        statusMsg.innerText = `💀 遊戲結束！玩家 ${winnerIndex + 1} 獲勝！`;
-                    }
-                    endGame();
+                    ui.timerDisplay.style.display = 'none';
+                    if (gameState.players[winnerIndex] === myUid) ui.statusMsg.innerText = "🏆 恭喜！你贏了！";
+                    else ui.statusMsg.innerText = `💀 遊戲結束！玩家 ${winnerIndex + 1} 獲勝！`;
+                    endGame(isSpectator);
                 }
             }
         }
@@ -492,71 +418,113 @@
         }
 
         function getNextTurn(currentUid) {
-            const currentIndex = gameState.players.indexOf(currentUid);
-            const nextIndex = (currentIndex + 1) % gameState.players.length;
-            return gameState.players[nextIndex];
+            const idx = gameState.players.indexOf(currentUid);
+            return gameState.players[(idx + 1) % gameState.players.length];
+        }
+        function isActiveTurnReady() {
+             // 確定輪到出牌的人，上一手也是他 (代表轉了一圈)
+             return gameState.lastPlayer === gameState.currentTurn;
         }
 
-        btnPlay.onclick = async () => {
-            if (selectedCards.length === 0) return alert("請先選擇要出的牌！");
-            
-            let myPlay = analyzeHand(selectedCards);
-            if (!myPlay) {
-                return alert("這不是合法的出牌牌型！(僅支援單張、一對、以及標準五張牌型)");
+        async function executeAction(isPass, cardsToPlay, targetUid) {
+            let newHand = gameState.hands[targetUid];
+            let newLastPlayed = gameState.lastPlayed;
+            let newLastPlayer = gameState.lastPlayer;
+
+            if (!isPass) {
+                newHand = gameState.hands[targetUid].filter(c => !cardsToPlay.some(sc => sc.value === c.value));
+                newLastPlayed = cardsToPlay;
+                newLastPlayer = targetUid;
             }
+
+            await setDoc(doc(db, "games", currentRoomId), {
+                ...gameState,
+                hands: { ...gameState.hands, [targetUid]: newHand },
+                lastPlayed: newLastPlayed,
+                lastPlayer: newLastPlayer,
+                currentTurn: getNextTurn(targetUid),
+                lastActionTime: Date.now()
+            });
+        }
+
+        ui.btnPlay.onclick = async () => {
+            if (selectedCards.length === 0) return alert("請選擇要出的牌！");
+            let myPlay = analyzeHand(selectedCards);
+            if (!myPlay) return alert("牌型不合法！(僅支援單張、一對、五張牌型)");
             
-            // 如果場上已經有牌，且不是大家都 Pass 的新回合
             if (gameState.lastPlayed.length > 0 && gameState.lastPlayer !== myUid) {
                 let lastPlay = analyzeHand(gameState.lastPlayed);
-                if (!lastPlay) return alert("場上牌型錯誤，建議重新開局");
-
-                if (myPlay.type !== lastPlay.type) {
-                    return alert(`出牌張數與牌型必須與場上一致！(場上為: ${lastPlay.type === 5 ? lastPlay.name : (lastPlay.type === 2 ? '一對' : '單張')})`);
-                }
-
-                // 比較五張牌的大小
+                if (myPlay.type !== lastPlay.type) return alert(`需符合場上牌型張數`);
                 if (myPlay.type === 5) {
-                    if (myPlay.subType < lastPlay.subType) {
-                        return alert(`你的牌型太小！(${myPlay.name} 無法打過 ${lastPlay.name})`);
-                    } else if (myPlay.subType === lastPlay.subType) {
-                        if (myPlay.power <= lastPlay.power) {
-                            return alert("你的牌點數沒有比場上的大！");
-                        }
-                    }
+                    if (myPlay.subType < lastPlay.subType) return alert(`牌型太小！`);
+                    if (myPlay.subType === lastPlay.subType && myPlay.power <= lastPlay.power) return alert("點數沒有比較大！");
                 } else {
-                    // 比較單張或一對的大小
-                    if (myPlay.power <= lastPlay.power) {
-                        return alert("你的牌必須大於目前的牌！");
-                    }
+                    if (myPlay.power <= lastPlay.power) return alert("點數沒有比較大！");
                 }
             }
-
-            const newHand = gameState.hands[myUid].filter(c => !selectedCards.some(sc => sc.value === c.value));
-            const newHands = { ...gameState.hands, [myUid]: newHand };
-            
-            await setDoc(doc(db, "games", currentRoomId), {
-                ...gameState,
-                hands: newHands,
-                lastPlayed: selectedCards,
-                lastPlayer: myUid,
-                currentTurn: getNextTurn(myUid)
-            });
+            await executeAction(false, selectedCards, myUid);
         };
 
-        btnPass.onclick = async () => {
-            await setDoc(doc(db, "games", currentRoomId), {
-                ...gameState,
-                currentTurn: getNextTurn(myUid)
-            });
+        ui.btnPass.onclick = async () => { await executeAction(true, [], myUid); };
+
+        ui.btnCancelAfk.onclick = async () => {
+            let afkPlayers = gameState.afkPlayers || [];
+            afkPlayers = afkPlayers.filter(id => id !== myUid);
+            await setDoc(doc(db, "games", currentRoomId), { ...gameState, afkPlayers, lastActionTime: Date.now() });
         };
 
-        function endGame() {
-            gameBoard.style.opacity = '0.7';
-            btnPlay.disabled = true;
-            btnPass.disabled = true;
-            if (gameState.players[0] === myUid) {
-                btnStart.style.display = 'inline-block';
-                btnStart.innerText = "再玩一局";
+        function endGame(isSpectator) {
+            ui.gameBoard.style.opacity = '0.8';
+            ui.btnPlay.disabled = true; ui.btnPass.disabled = true;
+            ui.afkOverlay.style.display = 'none';
+            if (!isSpectator && gameState.players[0] === myUid) {
+                ui.btnStart.style.display = 'inline-block';
+                ui.btnStart.innerText = "重新開局";
+            }
+        }
+
+        // ================= 核心時間軸系統 (AFK 與超時防護) =================
+        function startHeartbeat() {
+            if(clockInterval) clearInterval(clockInterval);
+            clockInterval = setInterval(async () => {
+                if (!gameState || gameState.status !== 'playing') return;
+                
+                let elapsed = Date.now() - gameState.lastActionTime;
+                let left = 15 - Math.floor(elapsed / 1000);
+                if (left >= 0) ui.timerDisplay.innerText = `⏳ ${left}s`;
+
+                // 15 秒一到，進行自動託管判定
+                if (elapsed > 15000) {
+                    let targetUid = gameState.currentTurn;
+                    let afkPlayers = gameState.afkPlayers || [];
+                    
+                    // 如果我是當前回合的人，我自己送出 AFK 動作
+                    if (myUid === targetUid && !afkPlayers.includes(myUid)) {
+                        afkPlayers.push(myUid);
+                        await setDoc(doc(db, "games", currentRoomId), { ...gameState, afkPlayers });
+                        autoPlayFor(myUid);
+                    } 
+                    // 如果過了 18 秒，當前回合的人還沒送出動作，代表他是幽靈 (斷線)，由下一位玩家幫他送出
+                    else if (elapsed > 18000) {
+                        let nextTurn = getNextTurn(targetUid);
+                        if (myUid === nextTurn) { // 由下家代勞，避免全部人同時寫入資料庫
+                            if (!afkPlayers.includes(targetUid)) afkPlayers.push(targetUid);
+                            await setDoc(doc(db, "games", currentRoomId), { ...gameState, afkPlayers });
+                            autoPlayFor(targetUid);
+                        }
+                    }
+                }
+            }, 1000);
+        }
+
+        async function autoPlayFor(uid) {
+            let isFreePlay = (gameState.lastPlayer === uid || gameState.lastPlayed.length === 0);
+            if (isFreePlay) {
+                let hand = gameState.hands[uid];
+                if(hand && hand.length > 0) await executeAction(false, [hand[0]], uid); // 自由出牌打出最小單張
+                else await executeAction(true, [], uid);
+            } else {
+                await executeAction(true, [], uid); // 要接牌一律 Pass
             }
         }
     </script>
