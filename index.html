@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>大老二 (Big Two) - 多人連線版</title>
+    <style>
+        body {
+            background-color: #277714;
+            color: white;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            text-align: center;
+            margin: 0;
+            padding: 10px;
+            display: flex;
+            flex-direction: column;
+            height: 100vh;
+            box-sizing: border-box;
+            overflow: hidden;
+        }
+        #top-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+        h2 { margin: 0; font-size: 18px; }
+        
+        /* 遊戲大廳 */
+        #lobby {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            flex-grow: 1;
+            background: rgba(0, 0, 0, 0.4);
+            border-radius: 15px;
+            padding: 20px;
+            margin: auto;
+            max-width: 400px;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        #lobby input {
+            padding: 12px;
+            font-size: 18px;
+            border-radius: 8px;
+            border: none;
+            margin-bottom: 15px;
+            width: 80%;
+            text-align: center;
+        }
+
+        /* 遊戲主要版面 */
+        #game-board {
+            flex-grow: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+        
+        /* 多人對手區 (迷你牌) */
+        #opponents-area {
+            display: flex;
+            justify-content: space-around;
+            width: 100%;
+            margin-bottom: 5px;
+        }
+        .opponent-box {
+            background: rgba(0,0,0,0.2);
+            padding: 5px 10px;
+            border-radius: 10px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            transition: 0.3s;
+            border: 2px solid transparent;
+        }
+        .opponent-box.active {
+            border: 2px solid #ffcc00;
+            background: rgba(255, 204, 0, 0.2);
+            box-shadow: 0 0 10px #ffcc00;
+        }
+        .opp-name { font-size: 12px; font-weight: bold; margin-bottom: 5px; }
+        .opp-hand-mini {
+            display: flex;
+        }
+        .mini-card {
+            width: 20px;
+            height: 30px;
+            background-color: #b22222;
+            background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.1) 4px, rgba(255,255,255,0.1) 8px);
+            border: 1px solid #777;
+            border-radius: 3px;
+            margin-left: -12px; /* 緊密疊加 */
+            box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
+        }
+        .mini-card:first-child { margin-left: 0; }
+
+        /* 玩家手牌區 */
+        .hand {
+            display: flex;
+            justify-content: center;
+            min-height: 90px;
+            padding-top: 25px;
+        }
+        
+        /* 出牌區 */
+        #play-area {
+            flex-grow: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            border: 2px dashed rgba(255,255,255,0.3);
+            border-radius: 10px;
+            margin: 5px 0;
+            min-height: 100px;
+            background: rgba(0,0,0,0.1);
+        }
+        
+        /* 標準卡牌樣式 */
+        .card {
+            width: 60px;
+            height: 90px;
+            background-color: white;
+            border: 1px solid #999;
+            border-radius: 6px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: black;
+            cursor: pointer;
+            box-shadow: -2px 2px 5px rgba(0,0,0,0.3);
+            transition: transform 0.2s, margin 0.2s;
+            user-select: none;
+            flex-shrink: 0;
+            margin-left: -30px; /* 標準重疊 */
+            position: relative;
+        }
+        .card:first-child { margin-left: 0; }
+        .card.red { color: #d32f2f; }
+        
+        /* 選取與懸停效果 */
+        .card:hover { transform: translateY(-15px); z-index: 10; }
+        .card.selected {
+            transform: translateY(-20px) !important;
+            border: 2px solid #ffcc00;
+            box-shadow: 0 0 10px #ffcc00;
+            z-index: 20;
+        }
+        
+        /* 出牌區的牌展開 */
+        #play-area .card { margin-left: -10px; }
+        #play-area .card:first-child { margin-left: 0; }
+
+        #controls { margin-bottom: 10px; }
+        
+        button {
+            padding: 8px 16px;
+            font-size: 15px;
+            margin: 0 5px;
+            cursor: pointer;
+            border: none;
+            border-radius: 6px;
+            background-color: #ffcc00;
+            color: #333;
+            font-weight: bold;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.2);
+        }
+        button:disabled { background-color: #666; color: #999; cursor: not-allowed; box-shadow: none; }
+        .btn-danger { background-color: #dc3545; color: white; padding: 6px 12px; font-size: 13px; }
+        #status-msg { font-size: 15px; font-weight: bold; color: #ffeb3b; margin-bottom: 8px; }
+
+        @media (max-width: 600px) {
+            .card { width: 50px; height: 75px; font-size: 16px; margin-left: -28px; }
+            .card.selected { transform: translateY(-15px) !important; }
+            .hand { padding-top: 15px; }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="top-bar">
+        <h2 id="room-display">大老二對戰 (2~4人)</h2>
+        <button id="btn-reset" class="btn-danger" style="display:none;">離開房間</button>
+    </div>
+    
+    <div id="status-msg">系統初始化中...</div>
+
+    <!-- 遊戲大廳 -->
+    <div id="lobby">
+        <h3 style="margin-top:0;">建立或加入房間</h3>
+        <input type="text" id="room-input" placeholder="請輸入自訂房間號碼" maxlength="10">
+        <button id="btn-join" disabled>進入房間</button>
+    </div>
+
+    <!-- 遊戲版面 -->
+    <div id="game-board" style="display:none;">
+        
+        <!-- 其他對手區域 -->
+        <div id="opponents-area"></div>
+
+        <!-- 場中央出牌區 -->
+        <div id="play-area"></div>
+
+        <!-- 自己的區域 -->
+        <div>
+            <div id="controls">
+                <button id="btn-play" disabled>出牌</button>
+                <button id="btn-pass" disabled>Pass</button>
+                <button id="btn-start" style="display:none;">開始新局</button>
+            </div>
+            <div style="font-size: 13px; margin-bottom: 3px;">你的牌</div>
+            <div id="my-hand" class="hand"></div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
+
+        const firebaseConfig = {
+            apiKey: "AIzaSyCqnOC9ggzHdwXzi0FIQq145wlqHZ2uGcU",
+            authDomain: "poker-f37a1.firebaseapp.com",
+            projectId: "poker-f37a1",
+            storageBucket: "poker-f37a1.firebasestorage.app",
+            messagingSenderId: "172508560862",
+            appId: "1:172508560862:web:8a49d88f3dfdae30b0314f",
+            measurementId: "G-DBVQTR3PMF"
+        };
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        let myUid = null;
+        let currentRoomId = null;
+        let gameState = null;
+        let selectedCards = [];
+        let unsubscribe = null;
+
+        const statusMsg = document.getElementById('status-msg');
+        const lobbyDiv = document.getElementById('lobby');
+        const roomInput = document.getElementById('room-input');
+        const btnJoin = document.getElementById('btn-join');
+        const gameBoard = document.getElementById('game-board');
+        const myHandDiv = document.getElementById('my-hand');
+        const opponentsAreaDiv = document.getElementById('opponents-area');
+        const playAreaDiv = document.getElementById('play-area');
+        const btnPlay = document.getElementById('btn-play');
+        const btnPass = document.getElementById('btn-pass');
+        const btnStart = document.getElementById('btn-start');
+        const btnReset = document.getElementById('btn-reset');
+        const roomDisplay = document.getElementById('room-display');
+
+        signInAnonymously(auth).then((userCred) => {
+            myUid = userCred.user.uid;
+            btnJoin.disabled = false;
+            statusMsg.innerText = "登入成功！請輸入房間號碼。";
+        }).catch(err => {
+            statusMsg.innerText = "登入失敗，請重新整理網頁。";
+        });
+
+        btnJoin.onclick = () => {
+            const roomId = roomInput.value.trim();
+            if (!roomId) return alert("請輸入房間號碼！");
+            
+            currentRoomId = `room_${roomId}`;
+            lobbyDiv.style.display = 'none';
+            btnReset.style.display = 'inline-block';
+            roomDisplay.innerText = `房間：${roomId}`;
+            statusMsg.innerText = `進入房間 [${roomId}] 中...`;
+            connectToRoom();
+        };
+
+        btnReset.onclick = () => {
+            if(unsubscribe) unsubscribe();
+            currentRoomId = null;
+            gameState = null;
+            gameBoard.style.display = 'none';
+            btnReset.style.display = 'none';
+            lobbyDiv.style.display = 'flex';
+            roomDisplay.innerText = "大老二對戰 (2~4人)";
+            statusMsg.innerText = "已離開房間。";
+        };
+
+        async function connectToRoom() {
+            const roomRef = doc(db, "games", currentRoomId);
+            unsubscribe = onSnapshot(roomRef, (snapshot) => {
+                if (!snapshot.exists()) {
+                    setDoc(roomRef, { players: [myUid], status: 'waiting' });
+                } else {
+                    gameState = snapshot.data();
+                    handleGameStateChange(roomRef);
+                }
+            });
+        }
+
+        async function handleGameStateChange(roomRef) {
+            let players = gameState.players || [];
+            
+            if (!players.includes(myUid)) {
+                // 最多支援 4 人，且只能在 waiting 狀態加入
+                if (gameState.status === 'waiting' && players.length < 4) {
+                    players.push(myUid);
+                    await setDoc(roomRef, { ...gameState, players: players });
+                    return;
+                } else {
+                    statusMsg.innerText = "⚠️ 房間已滿或遊戲已開始。";
+                    gameBoard.style.display = 'none';
+                    return;
+                }
+            }
+
+            gameBoard.style.display = 'flex';
+
+            if (gameState.status === 'waiting') {
+                statusMsg.innerText = `目前 ${players.length}/4 人。`;
+                // 房主 (P1) 可以決定何時開始 (>= 2人即可開始)
+                if (players[0] === myUid && players.length >= 2) {
+                    btnStart.style.display = 'inline-block';
+                    statusMsg.innerText += " 房主隨時可以開始！";
+                } else {
+                    btnStart.style.display = 'none';
+                    statusMsg.innerText += (players[0] === myUid) ? " (至少需2人)" : " (等待房主開始)";
+                }
+            } else if (gameState.status === 'playing') {
+                btnStart.style.display = 'none';
+                renderGame();
+            }
+        }
+
+        const suits = ['♣', '♦', '♥', '♠'];
+        const ranks = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'];
+
+        btnStart.onclick = async () => {
+            let deck = [];
+            for(let s=0; s<4; s++) {
+                for(let r=0; r<13; r++) {
+                    deck.push({suit: suits[s], rank: ranks[r], value: r*4 + s});
+                }
+            }
+            deck.sort(() => Math.random() - 0.5); // 洗牌
+
+            const numPlayers = gameState.players.length;
+            const cardsPerPlayer = 13; // 每人固定發 13 張
+            const hands = {};
+            
+            for(let i=0; i < numPlayers; i++) {
+                hands[gameState.players[i]] = deck.slice(i * cardsPerPlayer, (i + 1) * cardsPerPlayer).sort((a,b) => a.value - b.value);
+            }
+
+            await setDoc(doc(db, "games", currentRoomId), {
+                ...gameState,
+                status: 'playing',
+                hands: hands,
+                currentTurn: gameState.players[0], // P1 先出
+                lastPlayed: [],
+                lastPlayer: null
+            });
+        };
+
+        function renderGame() {
+            const isMyTurn = gameState.currentTurn === myUid;
+            statusMsg.innerText = isMyTurn ? "👉 換你出牌了！" : "⏳ 等待其他玩家...";
+            
+            btnPlay.disabled = !isMyTurn;
+            btnPass.disabled = !isMyTurn || gameState.lastPlayer === myUid || gameState.lastPlayed.length === 0;
+
+            const myCards = (gameState.hands && gameState.hands[myUid]) ? gameState.hands[myUid] : [];
+            
+            // 渲染其他所有對手 (動態生成)
+            opponentsAreaDiv.innerHTML = '';
+            gameState.players.forEach((pUid, index) => {
+                if(pUid === myUid) return; // 跳過自己
+                
+                let oppCardsCount = (gameState.hands && gameState.hands[pUid]) ? gameState.hands[pUid].length : 0;
+                let isActive = gameState.currentTurn === pUid;
+                
+                let oppDiv = document.createElement('div');
+                oppDiv.className = `opponent-box ${isActive ? 'active' : ''}`;
+                
+                let nameHtml = `<div class="opp-name">玩家 ${index + 1} ${isActive ? '🔥' : ''}</div>`;
+                
+                // 建立迷你牌疊加
+                let miniHandHtml = `<div class="opp-hand-mini">`;
+                for(let i=0; i<oppCardsCount; i++){
+                    miniHandHtml += `<div class="mini-card"></div>`;
+                }
+                miniHandHtml += `</div>`;
+                
+                oppDiv.innerHTML = nameHtml + miniHandHtml + `<div style="font-size:11px; margin-top:2px;">${oppCardsCount} 張</div>`;
+                opponentsAreaDiv.appendChild(oppDiv);
+            });
+
+            // 渲染我的牌
+            myHandDiv.innerHTML = '';
+            selectedCards = [];
+            myCards.forEach(card => {
+                let cardDiv = createCardElement(card);
+                cardDiv.onclick = () => {
+                    if(!isMyTurn) return;
+                    cardDiv.classList.toggle('selected');
+                    if (cardDiv.classList.contains('selected')) {
+                        selectedCards.push(card);
+                    } else {
+                        selectedCards = selectedCards.filter(c => c.value !== card.value);
+                    }
+                };
+                myHandDiv.appendChild(cardDiv);
+            });
+
+            // 渲染場中央出牌區 & Pass邏輯判定
+            playAreaDiv.innerHTML = '';
+            // 如果輪到我，而且上一手牌是我出的 (大家都Pass了)，清空牌桌讓我自由出牌
+            if (gameState.lastPlayer === myUid && isMyTurn) {
+                playAreaDiv.innerHTML = '<span style="color:#ffcc00; font-weight:bold;">大家都 Pass！<br>請出任意牌型</span>';
+            } else if (gameState.lastPlayed && gameState.lastPlayed.length > 0) {
+                gameState.lastPlayed.forEach(card => {
+                    playAreaDiv.appendChild(createCardElement(card));
+                });
+            } else {
+                playAreaDiv.innerHTML = '<span style="color:#aaa;">等待出牌</span>';
+            }
+
+            // 判斷勝負 (有人手牌歸零就結束)
+            if (gameState.hands && Object.keys(gameState.hands).length > 0) {
+                let winnerIndex = gameState.players.findIndex(p => gameState.hands[p] && gameState.hands[p].length === 0);
+                if (winnerIndex !== -1) {
+                    if (gameState.players[winnerIndex] === myUid) {
+                        statusMsg.innerText = "🏆 恭喜！你贏了！";
+                    } else {
+                        statusMsg.innerText = `💀 遊戲結束！玩家 ${winnerIndex + 1} 獲勝！`;
+                    }
+                    endGame();
+                }
+            }
+        }
+
+        function createCardElement(card) {
+            let div = document.createElement('div');
+            div.className = 'card';
+            if (card.suit === '♥' || card.suit === '♦') div.classList.add('red');
+            div.innerHTML = `${card.suit}<br>${card.rank}`;
+            return div;
+        }
+
+        // 下一回合順序演算法
+        function getNextTurn(currentUid) {
+            const currentIndex = gameState.players.indexOf(currentUid);
+            const nextIndex = (currentIndex + 1) % gameState.players.length;
+            return gameState.players[nextIndex];
+        }
+
+        btnPlay.onclick = async () => {
+            if (selectedCards.length === 0) return alert("請先選擇要出的牌！");
+            
+            selectedCards.sort((a,b) => a.value - b.value); 
+            
+            // 基礎規則：張數要一樣且最大牌比較大 (若大家Pass則無視)
+            if (gameState.lastPlayed.length > 0 && gameState.lastPlayer !== myUid) {
+                if (selectedCards.length !== gameState.lastPlayed.length) {
+                    return alert(`必須出 ${gameState.lastPlayed.length} 張牌！`);
+                }
+                const myHighest = selectedCards[selectedCards.length - 1].value;
+                const lastHighest = gameState.lastPlayed[gameState.lastPlayed.length - 1].value;
+                if (myHighest <= lastHighest) {
+                    return alert("你的牌必須大於目前的牌！");
+                }
+            }
+
+            const newHand = gameState.hands[myUid].filter(c => !selectedCards.some(sc => sc.value === c.value));
+            const newHands = { ...gameState.hands, [myUid]: newHand };
+            
+            await setDoc(doc(db, "games", currentRoomId), {
+                ...gameState,
+                hands: newHands,
+                lastPlayed: selectedCards,
+                lastPlayer: myUid,
+                currentTurn: getNextTurn(myUid)
+            });
+        };
+
+        btnPass.onclick = async () => {
+            await setDoc(doc(db, "games", currentRoomId), {
+                ...gameState,
+                currentTurn: getNextTurn(myUid)
+            });
+        };
+
+        function endGame() {
+            gameBoard.style.opacity = '0.7';
+            btnPlay.disabled = true;
+            btnPass.disabled = true;
+            if (gameState.players[0] === myUid) {
+                btnStart.style.display = 'inline-block';
+                btnStart.innerText = "再玩一局";
+            }
+        }
+    </script>
+</body>
+</html>
