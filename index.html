@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大老二 (Big Two) - 多人連線版</title>
+    <title>大老二 (Big Two) - 台灣正宗規則版</title>
     <style>
         body {
             background-color: #277714;
@@ -51,7 +51,6 @@
             text-align: center;
         }
 
-        /* 遊戲主要版面 */
         #game-board {
             flex-grow: 1;
             display: flex;
@@ -82,9 +81,7 @@
             box-shadow: 0 0 10px #ffcc00;
         }
         .opp-name { font-size: 12px; font-weight: bold; margin-bottom: 5px; }
-        .opp-hand-mini {
-            display: flex;
-        }
+        .opp-hand-mini { display: flex; }
         .mini-card {
             width: 20px;
             height: 30px;
@@ -92,18 +89,10 @@
             background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.1) 4px, rgba(255,255,255,0.1) 8px);
             border: 1px solid #777;
             border-radius: 3px;
-            margin-left: -12px; /* 緊密疊加 */
+            margin-left: -12px;
             box-shadow: -1px 1px 2px rgba(0,0,0,0.5);
         }
         .mini-card:first-child { margin-left: 0; }
-
-        /* 玩家手牌區 */
-        .hand {
-            display: flex;
-            justify-content: center;
-            min-height: 90px;
-            padding-top: 25px;
-        }
         
         /* 出牌區 */
         #play-area {
@@ -118,7 +107,7 @@
             background: rgba(0,0,0,0.1);
         }
         
-        /* 標準卡牌樣式 */
+        /* 卡牌共用樣式 */
         .card {
             width: 60px;
             height: 90px;
@@ -136,14 +125,10 @@
             transition: transform 0.2s, margin 0.2s;
             user-select: none;
             flex-shrink: 0;
-            margin-left: -30px; /* 標準重疊 */
             position: relative;
         }
-        .card:first-child { margin-left: 0; }
         .card.red { color: #d32f2f; }
-        
-        /* 選取與懸停效果 */
-        .card:hover { transform: translateY(-15px); z-index: 10; }
+        .card:hover { transform: translateY(-10px); z-index: 10; }
         .card.selected {
             transform: translateY(-20px) !important;
             border: 2px solid #ffcc00;
@@ -152,11 +137,28 @@
         }
         
         /* 出牌區的牌展開 */
-        #play-area .card { margin-left: -10px; }
+        #play-area .card { margin-left: -15px; }
         #play-area .card:first-child { margin-left: 0; }
 
-        #controls { margin-bottom: 10px; }
+        /* 玩家手牌區 - 支援左右滑動 */
+        .my-hand-container {
+            width: 100%;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch; /* 手機端順暢滑動 */
+            padding-bottom: 5px;
+        }
+        /* 隱藏原生捲軸讓畫面更美觀 */
+        .my-hand-container::-webkit-scrollbar { height: 6px; }
+        .my-hand-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
         
+        #my-hand {
+            display: inline-flex;
+            padding: 30px 15px 15px 15px; /* 上方預留牌浮起的空間 */
+        }
+        #my-hand .card { margin-left: -20px; } /* 減少重疊，確保手機好點擊 */
+        #my-hand .card:first-child { margin-left: 0; }
+
+        #controls { margin-bottom: 10px; }
         button {
             padding: 8px 16px;
             font-size: 15px;
@@ -174,9 +176,8 @@
         #status-msg { font-size: 15px; font-weight: bold; color: #ffeb3b; margin-bottom: 8px; }
 
         @media (max-width: 600px) {
-            .card { width: 50px; height: 75px; font-size: 16px; margin-left: -28px; }
+            .card { width: 55px; height: 80px; font-size: 18px; }
             .card.selected { transform: translateY(-15px) !important; }
-            .hand { padding-top: 15px; }
         }
     </style>
 </head>
@@ -189,31 +190,27 @@
     
     <div id="status-msg">系統初始化中...</div>
 
-    <!-- 遊戲大廳 -->
     <div id="lobby">
         <h3 style="margin-top:0;">建立或加入房間</h3>
         <input type="text" id="room-input" placeholder="請輸入自訂房間號碼" maxlength="10">
         <button id="btn-join" disabled>進入房間</button>
     </div>
 
-    <!-- 遊戲版面 -->
     <div id="game-board" style="display:none;">
-        
-        <!-- 其他對手區域 -->
         <div id="opponents-area"></div>
 
-        <!-- 場中央出牌區 -->
         <div id="play-area"></div>
 
-        <!-- 自己的區域 -->
         <div>
             <div id="controls">
                 <button id="btn-play" disabled>出牌</button>
                 <button id="btn-pass" disabled>Pass</button>
                 <button id="btn-start" style="display:none;">開始新局</button>
             </div>
-            <div style="font-size: 13px; margin-bottom: 3px;">你的牌</div>
-            <div id="my-hand" class="hand"></div>
+            <div style="font-size: 13px; margin-bottom: 3px;">你的牌 (可左右滑動)</div>
+            <div class="my-hand-container">
+                <div id="my-hand"></div>
+            </div>
         </div>
     </div>
 
@@ -255,6 +252,64 @@
         const btnStart = document.getElementById('btn-start');
         const btnReset = document.getElementById('btn-reset');
         const roomDisplay = document.getElementById('room-display');
+
+        // 台灣大老二權重設定：花色 ♣♦♥♠ (0~3)，數字 3~2 (0~12)
+        const suits = ['♣', '♦', '♥', '♠'];
+        const ranks = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'];
+
+        // 台灣傳統大老二牌型判斷邏輯
+        function analyzeHand(cards) {
+            if (!cards || cards.length === 0) return null;
+            let sorted = [...cards].sort((a, b) => a.value - b.value);
+            let len = sorted.length;
+            
+            // 單張
+            if (len === 1) return { type: 1, subType: 0, power: sorted[0].value };
+            // 一對
+            if (len === 2) {
+                if (sorted[0].rank === sorted[1].rank) return { type: 2, subType: 0, power: sorted[1].value };
+                return null;
+            }
+            // 五張牌型
+            if (len === 5) {
+                let isFlush = sorted.every(c => c.suit === sorted[0].suit);
+                let r = sorted.map(c => ranks.indexOf(c.rank)).sort((a,b) => a-b);
+                
+                let isStraight = false;
+                let straightPower = -1;
+                
+                // 一般順子 (34567 ~ 10JQKA)
+                if (r[4] - r[0] === 4 && new Set(r).size === 5) {
+                    isStraight = true;
+                    straightPower = sorted[4].value;
+                }
+                // 特例: A2345 (A=11, 2=12, 3=0, 4=1, 5=2)
+                else if (r[0]===0 && r[1]===1 && r[2]===2 && r[3]===11 && r[4]===12) {
+                    isStraight = true;
+                    straightPower = sorted.find(c => c.rank === '2').value;
+                }
+                // 特例: 23456 (2=12, 3=0, 4=1, 5=2, 6=3)
+                else if (r[0]===0 && r[1]===1 && r[2]===2 && r[3]===3 && r[4]===12) {
+                    isStraight = true;
+                    straightPower = sorted.find(c => c.rank === '2').value;
+                }
+
+                // 鐵支 (4+1)
+                let isFour = (r[0]===r[3]) || (r[1]===r[4]);
+                let fourPower = isFour ? (r[0]===r[3] ? sorted[3].value : sorted[4].value) : -1;
+                
+                // 葫蘆 (3+2)
+                let isFullHouse = (r[0]===r[1] && r[1]===r[2] && r[3]===r[4]) || (r[0]===r[1] && r[2]===r[3] && r[3]===r[4]);
+                let fullHousePower = isFullHouse ? (r[2]===r[0] ? sorted[2].value : sorted[4].value) : -1;
+
+                if (isStraight && isFlush) return { type: 5, subType: 5, power: straightPower, name: "同花順" };
+                if (isFour) return { type: 5, subType: 4, power: fourPower, name: "鐵支" };
+                if (isFullHouse) return { type: 5, subType: 3, power: fullHousePower, name: "葫蘆" };
+                if (isFlush) return { type: 5, subType: 2, power: sorted[4].value, name: "同花" };
+                if (isStraight) return { type: 5, subType: 1, power: straightPower, name: "順子" };
+            }
+            return null; // 不合法的牌型
+        }
 
         signInAnonymously(auth).then((userCred) => {
             myUid = userCred.user.uid;
@@ -303,7 +358,6 @@
             let players = gameState.players || [];
             
             if (!players.includes(myUid)) {
-                // 最多支援 4 人，且只能在 waiting 狀態加入
                 if (gameState.status === 'waiting' && players.length < 4) {
                     players.push(myUid);
                     await setDoc(roomRef, { ...gameState, players: players });
@@ -319,7 +373,6 @@
 
             if (gameState.status === 'waiting') {
                 statusMsg.innerText = `目前 ${players.length}/4 人。`;
-                // 房主 (P1) 可以決定何時開始 (>= 2人即可開始)
                 if (players[0] === myUid && players.length >= 2) {
                     btnStart.style.display = 'inline-block';
                     statusMsg.innerText += " 房主隨時可以開始！";
@@ -333,20 +386,17 @@
             }
         }
 
-        const suits = ['♣', '♦', '♥', '♠'];
-        const ranks = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'];
-
         btnStart.onclick = async () => {
             let deck = [];
             for(let s=0; s<4; s++) {
                 for(let r=0; r<13; r++) {
-                    deck.push({suit: suits[s], rank: ranks[r], value: r*4 + s});
+                    deck.push({suit: suits[s], rank: ranks[r], value: r*4 + s}); // value (0~51) 決定大小
                 }
             }
-            deck.sort(() => Math.random() - 0.5); // 洗牌
+            deck.sort(() => Math.random() - 0.5);
 
             const numPlayers = gameState.players.length;
-            const cardsPerPlayer = 13; // 每人固定發 13 張
+            const cardsPerPlayer = 13;
             const hands = {};
             
             for(let i=0; i < numPlayers; i++) {
@@ -357,7 +407,7 @@
                 ...gameState,
                 status: 'playing',
                 hands: hands,
-                currentTurn: gameState.players[0], // P1 先出
+                currentTurn: gameState.players[0],
                 lastPlayed: [],
                 lastPlayer: null
             });
@@ -372,10 +422,9 @@
 
             const myCards = (gameState.hands && gameState.hands[myUid]) ? gameState.hands[myUid] : [];
             
-            // 渲染其他所有對手 (動態生成)
             opponentsAreaDiv.innerHTML = '';
             gameState.players.forEach((pUid, index) => {
-                if(pUid === myUid) return; // 跳過自己
+                if(pUid === myUid) return; 
                 
                 let oppCardsCount = (gameState.hands && gameState.hands[pUid]) ? gameState.hands[pUid].length : 0;
                 let isActive = gameState.currentTurn === pUid;
@@ -384,8 +433,6 @@
                 oppDiv.className = `opponent-box ${isActive ? 'active' : ''}`;
                 
                 let nameHtml = `<div class="opp-name">玩家 ${index + 1} ${isActive ? '🔥' : ''}</div>`;
-                
-                // 建立迷你牌疊加
                 let miniHandHtml = `<div class="opp-hand-mini">`;
                 for(let i=0; i<oppCardsCount; i++){
                     miniHandHtml += `<div class="mini-card"></div>`;
@@ -396,7 +443,6 @@
                 opponentsAreaDiv.appendChild(oppDiv);
             });
 
-            // 渲染我的牌
             myHandDiv.innerHTML = '';
             selectedCards = [];
             myCards.forEach(card => {
@@ -413,9 +459,7 @@
                 myHandDiv.appendChild(cardDiv);
             });
 
-            // 渲染場中央出牌區 & Pass邏輯判定
             playAreaDiv.innerHTML = '';
-            // 如果輪到我，而且上一手牌是我出的 (大家都Pass了)，清空牌桌讓我自由出牌
             if (gameState.lastPlayer === myUid && isMyTurn) {
                 playAreaDiv.innerHTML = '<span style="color:#ffcc00; font-weight:bold;">大家都 Pass！<br>請出任意牌型</span>';
             } else if (gameState.lastPlayed && gameState.lastPlayed.length > 0) {
@@ -426,7 +470,6 @@
                 playAreaDiv.innerHTML = '<span style="color:#aaa;">等待出牌</span>';
             }
 
-            // 判斷勝負 (有人手牌歸零就結束)
             if (gameState.hands && Object.keys(gameState.hands).length > 0) {
                 let winnerIndex = gameState.players.findIndex(p => gameState.hands[p] && gameState.hands[p].length === 0);
                 if (winnerIndex !== -1) {
@@ -448,7 +491,6 @@
             return div;
         }
 
-        // 下一回合順序演算法
         function getNextTurn(currentUid) {
             const currentIndex = gameState.players.indexOf(currentUid);
             const nextIndex = (currentIndex + 1) % gameState.players.length;
@@ -458,17 +500,34 @@
         btnPlay.onclick = async () => {
             if (selectedCards.length === 0) return alert("請先選擇要出的牌！");
             
-            selectedCards.sort((a,b) => a.value - b.value); 
+            let myPlay = analyzeHand(selectedCards);
+            if (!myPlay) {
+                return alert("這不是合法的出牌牌型！(僅支援單張、一對、以及標準五張牌型)");
+            }
             
-            // 基礎規則：張數要一樣且最大牌比較大 (若大家Pass則無視)
+            // 如果場上已經有牌，且不是大家都 Pass 的新回合
             if (gameState.lastPlayed.length > 0 && gameState.lastPlayer !== myUid) {
-                if (selectedCards.length !== gameState.lastPlayed.length) {
-                    return alert(`必須出 ${gameState.lastPlayed.length} 張牌！`);
+                let lastPlay = analyzeHand(gameState.lastPlayed);
+                if (!lastPlay) return alert("場上牌型錯誤，建議重新開局");
+
+                if (myPlay.type !== lastPlay.type) {
+                    return alert(`出牌張數與牌型必須與場上一致！(場上為: ${lastPlay.type === 5 ? lastPlay.name : (lastPlay.type === 2 ? '一對' : '單張')})`);
                 }
-                const myHighest = selectedCards[selectedCards.length - 1].value;
-                const lastHighest = gameState.lastPlayed[gameState.lastPlayed.length - 1].value;
-                if (myHighest <= lastHighest) {
-                    return alert("你的牌必須大於目前的牌！");
+
+                // 比較五張牌的大小
+                if (myPlay.type === 5) {
+                    if (myPlay.subType < lastPlay.subType) {
+                        return alert(`你的牌型太小！(${myPlay.name} 無法打過 ${lastPlay.name})`);
+                    } else if (myPlay.subType === lastPlay.subType) {
+                        if (myPlay.power <= lastPlay.power) {
+                            return alert("你的牌點數沒有比場上的大！");
+                        }
+                    }
+                } else {
+                    // 比較單張或一對的大小
+                    if (myPlay.power <= lastPlay.power) {
+                        return alert("你的牌必須大於目前的牌！");
+                    }
                 }
             }
 
