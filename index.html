@@ -15,7 +15,6 @@
         #top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         h2 { margin: 0; font-size: 18px; }
         
-        /* 大廳樣式優化 */
         #lobby {
             display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
             flex-grow: 1; background: rgba(0, 0, 0, 0.5); border-radius: 15px; padding: 20px;
@@ -26,7 +25,6 @@
         .lobby-section h3 { margin-top: 0; margin-bottom: 10px; font-size: 16px; color: #ffcc00; }
         #lobby input { padding: 10px; font-size: 16px; border-radius: 8px; border: none; margin-bottom: 10px; width: 90%; text-align: center; box-sizing: border-box; }
         
-        /* 房間列表樣式 */
         #room-list-container { max-height: 150px; overflow-y: auto; text-align: left; background: rgba(0,0,0,0.3); border-radius: 8px; padding: 5px; }
         #room-list-container::-webkit-scrollbar { width: 6px; }
         #room-list-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
@@ -140,8 +138,9 @@
     </div>
 
     <script type="module">
+        // ⚠️ 新增引入 deleteDoc 以支援自動刪除房間功能
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
-        import { getFirestore, doc, setDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
+        import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
 
         const firebaseConfig = {
@@ -193,7 +192,6 @@
         const suits = ['♣', '♦', '♥', '♠'];
         const ranks = ['3', '4', '5', '6', '7', '8', '9', '10', 'J', 'Q', 'K', 'A', '2'];
 
-        // 讀取/產生預設暱稱
         let savedName = localStorage.getItem('pokerNickname');
         if (!savedName) savedName = "玩家_" + Math.floor(Math.random() * 9000 + 1000);
         ui.nicknameInput.value = savedName;
@@ -238,10 +236,10 @@
             myUid = userCred.user.uid;
             ui.btnJoin.disabled = false;
             ui.statusMsg.innerText = "登入成功！準備對戰。";
-            listenToLobby(); // 開始監聽房間列表
+            listenToLobby();
         }).catch(err => { ui.statusMsg.innerText = "登入失敗，請重整網頁。"; });
 
-        // ===== 大廳房間列表監聽 =====
+        // ===== 🧹 客戶端清道夫機制 (Garbage Collection) =====
         function listenToLobby() {
             unsubscribeLobby = onSnapshot(collection(db, "games"), (snapshot) => {
                 const now = Date.now();
@@ -250,12 +248,16 @@
                 
                 snapshot.forEach(docSnap => {
                     let data = docSnap.data();
-                    // 過濾掉超過2分鐘沒動靜的房間，或沒有人的房間
-                    if (!data.lastActionTime || (now - data.lastActionTime > 120000)) return;
-                    if (!data.players || data.players.length === 0) return;
+                    let roomId = docSnap.id;
+                    
+                    // ⚠️ 如果房間超過 2 分鐘沒動作，或者根本沒有人在裡面，直接將其從資料庫中永久刪除！
+                    if (!data.lastActionTime || (now - data.lastActionTime > 120000) || !data.players || data.players.length === 0) {
+                        deleteDoc(doc(db, "games", roomId)).catch(e => console.log("Clean up failed:", e));
+                        return; // 刪除後跳過渲染
+                    }
 
                     hasRooms = true;
-                    let displayId = docSnap.id.replace('room_', '');
+                    let displayId = roomId.replace('room_', '');
                     let pCount = data.players.length;
                     let isPlaying = data.status === 'playing';
                     let statusHtml = isPlaying ? `<span class="tag-playing">戰鬥中</span>` : `<span class="tag-waiting">等待中</span>`;
@@ -289,7 +291,7 @@
             const roomId = ui.roomInput.value.trim();
             if (!roomId) return alert("請輸入房間號碼！");
             
-            if(unsubscribeLobby) unsubscribeLobby(); // 離開大廳停止更新列表
+            if(unsubscribeLobby) unsubscribeLobby(); 
             
             currentRoomId = `room_${roomId}`;
             ui.lobby.style.display = 'none';
@@ -311,7 +313,7 @@
             ui.spectatorBanner.style.display = 'none';
             ui.roomDisplay.innerText = "大老二競技場";
             ui.statusMsg.innerText = "已離開房間。";
-            listenToLobby(); // 回大廳重新監聽列表
+            listenToLobby(); // 回大廳時再次啟動清道夫
         }
 
         async function connectToRoom() {
@@ -336,8 +338,9 @@
             
             const now = Date.now();
             if (gameState.lastActionTime && now - gameState.lastActionTime > 120000) {
-                alert("房間閒置過久，系統已自動解散並清出座位！");
-                await setDoc(roomRef, { players: [], spectators: [], playerNames: {}, status: 'waiting', lastActionTime: Date.now(), afkPlayers: [] });
+                // 如果在房間內遇到超時死房，自己把它刪除並離開
+                deleteDoc(roomRef).catch(e=>console.log(e));
+                alert("房間閒置過久，系統已自動解散並刪除此房間！");
                 leaveRoom();
                 return;
             }
@@ -361,7 +364,6 @@
                     return;
                 }
             } else if (playerNames[myUid] !== myName) {
-                // 如果在房間內改了名字(或剛進來名字沒存好)，更新它
                 playerNames[myUid] = myName;
                 needUpdateNames = true;
             }
@@ -375,7 +377,6 @@
 
             if (needUpdateNames) {
                 await setDoc(roomRef, { ...gameState, playerNames });
-                // Return to let the next snapshot trigger render with correct names
                 return; 
             }
 
