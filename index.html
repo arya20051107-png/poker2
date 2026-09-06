@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大老二 (Big Two) - 完整競技版</title>
+    <title>大老二 (Big Two) - 智能推薦競技版</title>
     <style>
         body {
             background-color: #277714; color: white;
@@ -64,18 +64,31 @@
         #my-hand .card { margin-left: -20px; }
         #my-hand .card:first-child { margin-left: 0; }
 
-        #controls { margin-bottom: 5px; display: flex; justify-content: center; align-items: center; gap: 10px;}
-        button { padding: 8px 16px; font-size: 15px; cursor: pointer; border: none; border-radius: 6px; background-color: #ffcc00; color: #333; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
+        /* 智能選牌推薦區 */
+        #hint-area { display: flex; justify-content: center; align-items: center; gap: 5px; margin-bottom: 8px; min-height: 28px; }
+        .hint-btn { background-color: #17a2b8; color: white; padding: 4px 10px; font-size: 13px; border: none; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
+        .hint-btn:hover { background-color: #138496; }
+
+        #controls { margin-bottom: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;}
+        button { padding: 8px 14px; font-size: 15px; cursor: pointer; border: none; border-radius: 6px; background-color: #ffcc00; color: #333; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         button:disabled { background-color: #666; color: #999; cursor: not-allowed; box-shadow: none; }
         .btn-danger { background-color: #dc3545; color: white; padding: 6px 12px; font-size: 13px; }
+        select { padding: 8px; border-radius: 6px; font-size: 14px; font-weight: bold; background: #fff; color: #333; border: none; margin-bottom: 5px; }
         
         #status-msg { font-size: 15px; font-weight: bold; color: #ffeb3b; margin-bottom: 5px; }
         #timer-display { font-size: 18px; font-weight: bold; color: #ff5555; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 5px; }
 
         #afk-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; flex-direction: column; justify-content: center; align-items: center; border-radius: 10px; }
         #afk-overlay h1 { color: #ff5555; }
-        
         #spectator-banner { display: none; background: rgba(0, 150, 255, 0.8); padding: 5px; border-radius: 5px; margin-bottom: 5px; font-weight: bold; }
+
+        @keyframes popout {
+            0% { transform: translate(-50%, -50%) scale(0.5); opacity: 0; }
+            10% { transform: translate(-50%, -50%) scale(1.1); opacity: 1; }
+            20% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            80% { transform: translate(-50%, -50%) scale(1); opacity: 1; }
+            100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
+        }
 
         @media (max-width: 600px) {
             .card { width: 55px; height: 80px; font-size: 18px; }
@@ -98,13 +111,11 @@
             <h3>📝 玩家設定</h3>
             <input type="text" id="nickname-input" placeholder="請輸入你的暱稱" maxlength="8">
         </div>
-
         <div class="lobby-section">
             <h3>🏠 建立或搜尋房間</h3>
             <input type="text" id="room-input" placeholder="輸入房號 (如: 666)" maxlength="10">
             <button id="btn-join" disabled style="width: 90%;">進入對戰</button>
         </div>
-
         <div class="lobby-section" style="margin-bottom: 0;">
             <h3>🌐 目前活躍的房間</h3>
             <div id="room-list-container">
@@ -116,7 +127,7 @@
     <div id="game-board" style="display:none;">
         <div id="afk-overlay">
             <h1>🤖 系統託管中</h1>
-            <p>超過 15 秒無動作，系統已接管您的手牌。</p>
+            <p>無動作超時，系統已接管您的手牌。</p>
             <button id="btn-cancel-afk" style="padding: 12px 24px; font-size: 18px; background: #4CAF50; color: white;">回來玩！取消託管</button>
         </div>
 
@@ -126,11 +137,28 @@
         <div id="my-play-area">
             <div id="controls">
                 <span id="timer-display" style="display:none;">⏳ 15s</span>
+                
+                <!-- 房主設定區 -->
+                <div id="host-settings" style="display:none; flex-wrap:wrap; justify-content:center; gap:5px;">
+                    <select id="time-limit-select">
+                        <option value="15">⏱️ 限時 15 秒</option>
+                        <option value="30">⏱️ 限時 30 秒</option>
+                        <option value="0">☕ 無時間限制</option>
+                    </select>
+                    <select id="game-mode-select">
+                        <option value="classic">🃏 經典大老二</option>
+                        <option value="chong3">🔥 衝三模式 (♣3獲額外回合)</option>
+                    </select>
+                    <button id="btn-start" style="background-color: #4CAF50; color: white;">開始新局</button>
+                </div>
+                
                 <button id="btn-play" disabled>出牌</button>
                 <button id="btn-pass" disabled>Pass</button>
-                <button id="btn-start" style="display:none;">開始新局</button>
             </div>
-            <div style="font-size: 13px; margin-bottom: 3px;" id="hand-label">你的牌 (左右滑動)</div>
+            
+            <!-- 智能推薦按鈕區 -->
+            <div id="hint-area"></div>
+            
             <div class="my-hand-container">
                 <div id="my-hand"></div>
             </div>
@@ -138,7 +166,6 @@
     </div>
 
     <script type="module">
-        // ⚠️ 新增引入 deleteDoc 以支援自動刪除房間功能
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-app.js";
         import { getFirestore, doc, setDoc, onSnapshot, collection, deleteDoc } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-firestore.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/10.4.0/firebase-auth.js";
@@ -164,6 +191,11 @@
         let unsubscribeRoom = null;
         let unsubscribeLobby = null;
         let clockInterval = null;
+        
+        let cachedHints = {};
+        let currentHintType = '';
+        let currentHintIndex = 0;
+        let myCardsGlobal = [];
 
         const ui = {
             statusMsg: document.getElementById('status-msg'),
@@ -186,7 +218,10 @@
             btnCancelAfk: document.getElementById('btn-cancel-afk'),
             spectatorBanner: document.getElementById('spectator-banner'),
             myPlayArea: document.getElementById('my-play-area'),
-            handLabel: document.getElementById('hand-label')
+            hostSettings: document.getElementById('host-settings'),
+            gameModeSelect: document.getElementById('game-mode-select'),
+            timeLimitSelect: document.getElementById('time-limit-select'),
+            hintArea: document.getElementById('hint-area')
         };
 
         const suits = ['♣', '♦', '♥', '♠'];
@@ -203,6 +238,29 @@
             return name;
         }
 
+        function showEventToast(msg) {
+            let toast = document.createElement('div');
+            toast.innerText = msg;
+            toast.style.cssText = "position:absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(220,53,69,0.95); color: #fff; padding: 20px 40px; border-radius: 12px; font-size: 26px; font-weight: bold; z-index: 1000; box-shadow: 0 0 30px #ff0000; animation: popout 3s forwards; white-space: nowrap;";
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 3000);
+        }
+
+        // ================= 智能手牌分析器 (Smart Combinations) =================
+        function getCombinations(arr, k) {
+            let results = [];
+            function helper(start, combo) {
+                if (combo.length === k) { results.push([...combo]); return; }
+                for (let i = start; i < arr.length; i++) {
+                    combo.push(arr[i]);
+                    helper(i + 1, combo);
+                    combo.pop();
+                }
+            }
+            helper(0, []);
+            return results;
+        }
+
         function analyzeHand(cards) {
             if (!cards || cards.length === 0) return null;
             let sorted = [...cards].sort((a, b) => a.value - b.value);
@@ -216,13 +274,16 @@
                 let isFlush = sorted.every(c => c.suit === sorted[0].suit);
                 let r = sorted.map(c => ranks.indexOf(c.rank)).sort((a,b) => a-b);
                 let isStraight = false, straightPower = -1;
+                
                 if (r[4] - r[0] === 4 && new Set(r).size === 5) { isStraight = true; straightPower = sorted[4].value; }
                 else if (r[0]===0 && r[1]===1 && r[2]===2 && r[3]===11 && r[4]===12) { isStraight = true; straightPower = sorted.find(c => c.rank === '2').value; }
                 else if (r[0]===0 && r[1]===1 && r[2]===2 && r[3]===3 && r[4]===12) { isStraight = true; straightPower = sorted.find(c => c.rank === '2').value; }
+                
                 let isFour = (r[0]===r[3]) || (r[1]===r[4]);
                 let fourPower = isFour ? (r[0]===r[3] ? sorted[3].value : sorted[4].value) : -1;
                 let isFullHouse = (r[0]===r[1] && r[1]===r[2] && r[3]===r[4]) || (r[0]===r[1] && r[2]===r[3] && r[3]===r[4]);
                 let fullHousePower = isFullHouse ? (r[2]===r[0] ? sorted[2].value : sorted[4].value) : -1;
+                
                 if (isStraight && isFlush) return { type: 5, subType: 5, power: straightPower, name: "同花順" };
                 if (isFour) return { type: 5, subType: 4, power: fourPower, name: "鐵支" };
                 if (isFullHouse) return { type: 5, subType: 3, power: fullHousePower, name: "葫蘆" };
@@ -232,6 +293,37 @@
             return null; 
         }
 
+        function findAllHints(cards) {
+            let hints = { '一對': [], '順子': [], '同花': [], '葫蘆': [], '鐵支': [], '同花順': [] };
+            if(!cards || cards.length === 0) return hints;
+
+            for(let i=0; i<cards.length-1; i++){
+                for(let j=i+1; j<cards.length; j++){
+                    if(cards[i].rank === cards[j].rank) hints['一對'].push([cards[i], cards[j]]);
+                }
+            }
+
+            if(cards.length >= 5) {
+                let combos5 = getCombinations(cards, 5);
+                for(let combo of combos5) {
+                    let res = analyzeHand(combo);
+                    if(res && res.type === 5) {
+                        if(res.subType === 1) hints['順子'].push(combo);
+                        if(res.subType === 2) hints['同花'].push(combo);
+                        if(res.subType === 3) hints['葫蘆'].push(combo);
+                        if(res.subType === 4) hints['鐵支'].push(combo);
+                        if(res.subType === 5) hints['同花順'].push(combo);
+                    }
+                }
+            }
+            // 依照戰力由小到大排序，方便循環切換時先出小的
+            for(let key in hints) {
+                hints[key].sort((a,b) => analyzeHand(a).power - analyzeHand(b).power);
+            }
+            return hints;
+        }
+
+        // ================= Firebase 與流程控制 =================
         signInAnonymously(auth).then((userCred) => {
             myUid = userCred.user.uid;
             ui.btnJoin.disabled = false;
@@ -239,7 +331,6 @@
             listenToLobby();
         }).catch(err => { ui.statusMsg.innerText = "登入失敗，請重整網頁。"; });
 
-        // ===== 🧹 客戶端清道夫機制 (Garbage Collection) =====
         function listenToLobby() {
             unsubscribeLobby = onSnapshot(collection(db, "games"), (snapshot) => {
                 const now = Date.now();
@@ -249,24 +340,25 @@
                 snapshot.forEach(docSnap => {
                     let data = docSnap.data();
                     let roomId = docSnap.id;
-                    
-                    // ⚠️ 如果房間超過 2 分鐘沒動作，或者根本沒有人在裡面，直接將其從資料庫中永久刪除！
                     if (!data.lastActionTime || (now - data.lastActionTime > 120000) || !data.players || data.players.length === 0) {
-                        deleteDoc(doc(db, "games", roomId)).catch(e => console.log("Clean up failed:", e));
-                        return; // 刪除後跳過渲染
+                        deleteDoc(doc(db, "games", roomId)).catch(e => console.log(e));
+                        return; 
                     }
-
                     hasRooms = true;
                     let displayId = roomId.replace('room_', '');
                     let pCount = data.players.length;
                     let isPlaying = data.status === 'playing';
+                    let modeTag = data.mode === 'chong3' ? '🔥衝三' : '經典';
+                    let timeTag = data.timeLimit > 0 ? `⏱️${data.timeLimit}s` : '☕無時限';
                     let statusHtml = isPlaying ? `<span class="tag-playing">戰鬥中</span>` : `<span class="tag-waiting">等待中</span>`;
                     
                     let div = document.createElement('div');
                     div.className = 'room-item';
                     div.innerHTML = `
                         <div class="room-info">
-                            <strong style="color: #fff;">房號: ${displayId}</strong>
+                            <strong style="color: #fff;">房號: ${displayId} 
+                                <span style="font-size:11px; background:#fff; color:#333; padding:2px 4px; border-radius:3px;">${modeTag} | ${timeTag}</span>
+                            </strong>
                             <span style="color: #aaa;">人數: ${pCount}/4 | ${statusHtml}</span>
                         </div>
                         <button class="join-btn" data-id="${displayId}">加入</button>
@@ -274,14 +366,10 @@
                     ui.roomListContainer.appendChild(div);
                 });
 
-                if (!hasRooms) {
-                    ui.roomListContainer.innerHTML = '<div style="text-align: center; color: #aaa; padding: 10px;">目前沒有活躍的房間，自己建一個吧！</div>';
-                } else {
+                if (!hasRooms) ui.roomListContainer.innerHTML = '<div style="text-align: center; color: #aaa; padding: 10px;">目前沒有活躍的房間，自己建一個吧！</div>';
+                else {
                     document.querySelectorAll('.join-btn').forEach(btn => {
-                        btn.onclick = (e) => {
-                            ui.roomInput.value = e.target.getAttribute('data-id');
-                            ui.btnJoin.click();
-                        };
+                        btn.onclick = (e) => { ui.roomInput.value = e.target.getAttribute('data-id'); ui.btnJoin.click(); };
                     });
                 }
             });
@@ -290,7 +378,6 @@
         ui.btnJoin.onclick = () => {
             const roomId = ui.roomInput.value.trim();
             if (!roomId) return alert("請輸入房間號碼！");
-            
             if(unsubscribeLobby) unsubscribeLobby(); 
             
             currentRoomId = `room_${roomId}`;
@@ -313,16 +400,15 @@
             ui.spectatorBanner.style.display = 'none';
             ui.roomDisplay.innerText = "大老二競技場";
             ui.statusMsg.innerText = "已離開房間。";
-            listenToLobby(); // 回大廳時再次啟動清道夫
+            listenToLobby(); 
         }
 
         async function connectToRoom() {
             const roomRef = doc(db, "games", currentRoomId);
             unsubscribeRoom = onSnapshot(roomRef, async (snapshot) => {
                 if (!snapshot.exists()) {
-                    let playerNames = {};
-                    playerNames[myUid] = getMyNickname();
-                    await setDoc(roomRef, { players: [myUid], playerNames: playerNames, spectators: [], status: 'waiting', lastActionTime: Date.now(), afkPlayers: [] });
+                    let playerNames = {}; playerNames[myUid] = getMyNickname();
+                    await setDoc(roomRef, { players: [myUid], playerNames: playerNames, spectators: [], status: 'waiting', lastActionTime: Date.now(), afkPlayers: [], mode: 'classic', timeLimit: 15 });
                 } else {
                     gameState = snapshot.data();
                     await handleGameStateChange(roomRef);
@@ -338,67 +424,55 @@
             
             const now = Date.now();
             if (gameState.lastActionTime && now - gameState.lastActionTime > 120000) {
-                // 如果在房間內遇到超時死房，自己把它刪除並離開
                 deleteDoc(roomRef).catch(e=>console.log(e));
-                alert("房間閒置過久，系統已自動解散並刪除此房間！");
-                leaveRoom();
-                return;
+                alert("房間閒置過久，已自動解散清空！"); leaveRoom(); return;
             }
 
-            let myName = getMyNickname();
-            let needUpdateNames = false;
+            if (gameState.eventMessage && gameState.lastEventTime && gameState.lastEventTime !== window.lastEventTime) {
+                showEventToast(gameState.eventMessage); window.lastEventTime = gameState.lastEventTime;
+            }
+
+            let myName = getMyNickname(); let needUpdateNames = false;
             
             if (!players.includes(myUid) && !spectators.includes(myUid)) {
                 playerNames[myUid] = myName;
-                if (gameState.status === 'playing') {
-                    spectators.push(myUid);
-                    await setDoc(roomRef, { ...gameState, spectators, playerNames });
-                    return;
-                } else if (players.length < 4) {
-                    players.push(myUid);
-                    await setDoc(roomRef, { ...gameState, players, playerNames });
-                    return;
-                } else {
-                    ui.statusMsg.innerText = "⚠️ 房間已滿。";
-                    leaveRoom();
-                    return;
-                }
-            } else if (playerNames[myUid] !== myName) {
-                playerNames[myUid] = myName;
-                needUpdateNames = true;
-            }
+                if (gameState.status === 'playing') { spectators.push(myUid); await setDoc(roomRef, { ...gameState, spectators, playerNames }); return; }
+                else if (players.length < 4) { players.push(myUid); await setDoc(roomRef, { ...gameState, players, playerNames }); return; }
+                else { ui.statusMsg.innerText = "⚠️ 房間已滿。"; leaveRoom(); return; }
+            } else if (playerNames[myUid] !== myName) { playerNames[myUid] = myName; needUpdateNames = true; }
             
             if (gameState.status === 'waiting' && spectators.includes(myUid) && players.length < 4) {
-                spectators = spectators.filter(id => id !== myUid);
-                players.push(myUid);
-                await setDoc(roomRef, { ...gameState, players, spectators, playerNames });
-                return;
+                spectators = spectators.filter(id => id !== myUid); players.push(myUid);
+                await setDoc(roomRef, { ...gameState, players, spectators, playerNames }); return;
             }
-
-            if (needUpdateNames) {
-                await setDoc(roomRef, { ...gameState, playerNames });
-                return; 
-            }
+            if (needUpdateNames) { await setDoc(roomRef, { ...gameState, playerNames }); return; }
 
             ui.gameBoard.style.display = 'flex';
             let isSpectator = spectators.includes(myUid);
             ui.spectatorBanner.style.display = isSpectator ? 'block' : 'none';
             ui.myPlayArea.style.display = isSpectator ? 'none' : 'block';
-            ui.handLabel.innerText = `${myName} 的牌 (左右滑動)`;
+
+            let modeDisplay = (gameState.mode === 'chong3') ? '🔥衝三' : '經典';
+            let timeDisplay = (gameState.timeLimit > 0) ? `⏱️${gameState.timeLimit}s` : '☕無時限';
+            ui.roomDisplay.innerText = `房間: ${currentRoomId.replace('room_','')} [${modeDisplay} | ${timeDisplay}]`;
 
             if (gameState.status === 'waiting') {
-                ui.timerDisplay.style.display = 'none';
+                ui.timerDisplay.style.display = 'none'; ui.btnPlay.style.display = 'none'; ui.btnPass.style.display = 'none';
+                ui.hintArea.innerHTML = '';
                 ui.statusMsg.innerText = `目前 ${players.length}/4 人 (觀戰: ${spectators.length}人)`;
-                if (!isSpectator && players[0] === myUid && players.length >= 2) {
-                    ui.btnStart.style.display = 'inline-block';
-                    ui.statusMsg.innerText += " 房主可開始！";
+                
+                if (!isSpectator && players[0] === myUid) {
+                    ui.hostSettings.style.display = 'flex';
+                    ui.statusMsg.innerText += (players.length >= 2) ? " 房主可開始！" : " (需2人)";
+                    ui.btnStart.disabled = (players.length < 2);
                 } else {
-                    ui.btnStart.style.display = 'none';
-                    ui.statusMsg.innerText += (!isSpectator && players[0] === myUid) ? " (需2人)" : " (等房主開局)";
+                    ui.hostSettings.style.display = 'none';
+                    ui.statusMsg.innerText += " (等待房主設定開局)";
                 }
             } else if (gameState.status === 'playing') {
-                ui.btnStart.style.display = 'none';
-                ui.timerDisplay.style.display = 'inline-block';
+                ui.hostSettings.style.display = 'none';
+                ui.btnPlay.style.display = 'inline-block'; ui.btnPass.style.display = 'inline-block';
+                ui.timerDisplay.style.display = (gameState.timeLimit > 0) ? 'inline-block' : 'none';
                 renderGame(isSpectator);
             }
         }
@@ -408,10 +482,8 @@
             for(let s=0; s<4; s++) for(let r=0; r<13; r++) deck.push({suit: suits[s], rank: ranks[r], value: r*4 + s});
             deck.sort(() => Math.random() - 0.5);
 
-            const numPlayers = gameState.players.length;
-            const hands = {};
-            let minVal = 999;
-            let firstTurnPlayer = gameState.players[0];
+            const numPlayers = gameState.players.length; const hands = {};
+            let minVal = 999; let firstTurnPlayer = gameState.players[0];
 
             for(let i=0; i < numPlayers; i++) {
                 let pUid = gameState.players[i];
@@ -420,54 +492,43 @@
                 if (pMinVal < minVal) { minVal = pMinVal; firstTurnPlayer = pUid; }
             }
 
+            let selectedMode = ui.gameModeSelect.value;
+            let selectedTime = parseInt(ui.timeLimitSelect.value);
+
             await setDoc(doc(db, "games", currentRoomId), {
-                ...gameState,
-                status: 'playing',
-                hands: hands,
-                currentTurn: firstTurnPlayer,
-                lastPlayed: [],
-                lastPlayer: null,
-                lastActionTime: Date.now(),
-                afkPlayers: []
+                ...gameState, status: 'playing', mode: selectedMode, timeLimit: selectedTime,
+                hands: hands, currentTurn: firstTurnPlayer, lastPlayed: [], lastPlayer: null,
+                lastActionTime: Date.now(), afkPlayers: []
             });
         };
 
-        function getPlayerName(uid) {
-            if (gameState && gameState.playerNames && gameState.playerNames[uid]) {
-                return gameState.playerNames[uid];
-            }
-            return "神秘玩家";
-        }
+        function getPlayerName(uid) { return (gameState && gameState.playerNames && gameState.playerNames[uid]) ? gameState.playerNames[uid] : "神秘玩家"; }
 
         function renderGame(isSpectator) {
             const isMyTurn = (!isSpectator && gameState.currentTurn === myUid);
             let afkPlayers = gameState.afkPlayers || [];
             
-            if (isSpectator) {
-                ui.statusMsg.innerText = `目前輪到 ${getPlayerName(gameState.currentTurn)} 出牌`;
-            } else {
+            if (isSpectator) { ui.statusMsg.innerText = `目前輪到 ${getPlayerName(gameState.currentTurn)} 出牌`; } 
+            else {
                 ui.statusMsg.innerText = isMyTurn ? "👉 換你出牌了！" : `⏳ 等待 ${getPlayerName(gameState.currentTurn)} 出牌...`;
                 ui.btnPlay.disabled = !isMyTurn;
                 ui.btnPass.disabled = !isMyTurn || gameState.lastPlayer === myUid || gameState.lastPlayed.length === 0;
             }
 
-            if (afkPlayers.includes(myUid)) ui.afkOverlay.style.display = 'flex';
-            else ui.afkOverlay.style.display = 'none';
+            ui.afkOverlay.style.display = afkPlayers.includes(myUid) ? 'flex' : 'none';
 
-            const myCards = (!isSpectator && gameState.hands && gameState.hands[myUid]) ? gameState.hands[myUid] : [];
+            myCardsGlobal = (!isSpectator && gameState.hands && gameState.hands[myUid]) ? gameState.hands[myUid] : [];
             
+            // Render Opponents
             ui.opponentsArea.innerHTML = '';
             gameState.players.forEach((pUid) => {
                 if(pUid === myUid && !isSpectator) return; 
-                
                 let oppCardsCount = (gameState.hands && gameState.hands[pUid]) ? gameState.hands[pUid].length : 0;
-                let isActive = gameState.currentTurn === pUid;
-                let isAfk = afkPlayers.includes(pUid);
+                let isActive = gameState.currentTurn === pUid; let isAfk = afkPlayers.includes(pUid);
                 let displayName = getPlayerName(pUid);
                 
                 let oppDiv = document.createElement('div');
                 oppDiv.className = `opponent-box ${isActive ? 'active' : ''} ${isAfk ? 'afk' : ''}`;
-                
                 let nameHtml = `<div class="opp-name" title="${displayName}">${displayName} ${isActive ? '🔥' : ''} ${isAfk ? '🤖' : ''}</div>`;
                 let miniHandHtml = `<div class="opp-hand-mini">`;
                 for(let i=0; i<oppCardsCount; i++) miniHandHtml += `<div class="mini-card"></div>`;
@@ -477,28 +538,24 @@
                 ui.opponentsArea.appendChild(oppDiv);
             });
 
-            ui.myHand.innerHTML = '';
-            selectedCards = [];
-            myCards.forEach(card => {
-                let cardDiv = createCardElement(card);
-                cardDiv.onclick = () => {
-                    if(!isMyTurn || afkPlayers.includes(myUid)) return;
-                    cardDiv.classList.toggle('selected');
-                    if (cardDiv.classList.contains('selected')) selectedCards.push(card);
-                    else selectedCards = selectedCards.filter(c => c.value !== card.value);
-                };
-                ui.myHand.appendChild(cardDiv);
-            });
+            // Cache Smart Hints
+            if (!isSpectator) {
+                cachedHints = findAllHints(myCardsGlobal);
+                renderHintButtons();
+            }
+            renderMyHand(isSpectator, isMyTurn, afkPlayers);
 
+            // Render Play Area
             ui.playArea.innerHTML = '';
             if (gameState.lastPlayer === gameState.currentTurn && isActiveTurnReady()) {
-                ui.playArea.innerHTML = '<span style="color:#ffcc00; font-weight:bold;">大家都 Pass！<br>新回合自由出牌</span>';
+                ui.playArea.innerHTML = '<span style="color:#ffcc00; font-weight:bold;">新回合自由出牌！</span>';
             } else if (gameState.lastPlayed && gameState.lastPlayed.length > 0) {
                 gameState.lastPlayed.forEach(card => ui.playArea.appendChild(createCardElement(card)));
             } else {
-                ui.playArea.innerHTML = '<span style="color:#aaa;">首局先出</span>';
+                ui.playArea.innerHTML = '<span style="color:#aaa;">首局，由包含最小牌者先出</span>';
             }
 
+            // Win Condition
             if (gameState.hands && Object.keys(gameState.hands).length > 0) {
                 let winnerIndex = gameState.players.findIndex(p => gameState.hands[p] && gameState.hands[p].length === 0);
                 if (winnerIndex !== -1) {
@@ -509,6 +566,45 @@
                     endGame(isSpectator);
                 }
             }
+        }
+
+        // ================= UI 渲染切割 (手牌 & 提示按鈕) =================
+        function renderHintButtons() {
+            ui.hintArea.innerHTML = '';
+            let hasHints = false;
+            for(let key in cachedHints) {
+                if(cachedHints[key].length > 0) {
+                    hasHints = true;
+                    let btn = document.createElement('button');
+                    btn.className = 'hint-btn';
+                    btn.innerText = `${key} (${cachedHints[key].length})`;
+                    btn.onclick = () => {
+                        if (currentHintType === key) currentHintIndex = (currentHintIndex + 1) % cachedHints[key].length;
+                        else { currentHintType = key; currentHintIndex = 0; }
+                        selectedCards = [...cachedHints[key][currentHintIndex]];
+                        renderMyHand(false, gameState.currentTurn === myUid, gameState.afkPlayers || []);
+                    };
+                    ui.hintArea.appendChild(btn);
+                }
+            }
+            if(!hasHints && myCardsGlobal.length > 0) ui.hintArea.innerHTML = '<span style="color:#aaa; font-size:12px;">無特殊組合牌型</span>';
+        }
+
+        function renderMyHand(isSpectator, isMyTurn, afkPlayers) {
+            ui.myHand.innerHTML = '';
+            myCardsGlobal.forEach(card => {
+                let cardDiv = createCardElement(card);
+                if (selectedCards.some(c => c.value === card.value)) cardDiv.classList.add('selected');
+                
+                cardDiv.onclick = () => {
+                    if(!isMyTurn || afkPlayers.includes(myUid)) return;
+                    if (selectedCards.some(c => c.value === card.value)) {
+                        selectedCards = selectedCards.filter(c => c.value !== card.value);
+                    } else { selectedCards.push(card); }
+                    renderMyHand(isSpectator, isMyTurn, afkPlayers); // 局部更新UI
+                };
+                ui.myHand.appendChild(cardDiv);
+            });
         }
 
         function createCardElement(card) {
@@ -523,26 +619,29 @@
             const idx = gameState.players.indexOf(currentUid);
             return gameState.players[(idx + 1) % gameState.players.length];
         }
-        function isActiveTurnReady() {
-             return gameState.lastPlayer === gameState.currentTurn;
-        }
+        function isActiveTurnReady() { return gameState.lastPlayer === gameState.currentTurn; }
 
         async function executeAction(isPass, cardsToPlay, targetUid) {
             let newHand = gameState.hands[targetUid];
             let newLastPlayed = gameState.lastPlayed;
             let newLastPlayer = gameState.lastPlayer;
+            let nextTurn = getNextTurn(targetUid);
+            let eventMsg = ""; let eventTime = gameState.lastEventTime || null;
+
             if (!isPass) {
                 newHand = gameState.hands[targetUid].filter(c => !cardsToPlay.some(sc => sc.value === c.value));
-                newLastPlayed = cardsToPlay;
-                newLastPlayer = targetUid;
+                newLastPlayed = cardsToPlay; newLastPlayer = targetUid;
+
+                if (gameState.mode === 'chong3' && cardsToPlay.some(c => c.value === 0)) {
+                    newLastPlayed = []; nextTurn = targetUid;
+                    eventMsg = `🔥 ${getPlayerName(targetUid)} 發動了【衝三】！獲得額外回合！🔥`;
+                    eventTime = Date.now();
+                }
             }
             await setDoc(doc(db, "games", currentRoomId), {
-                ...gameState,
-                hands: { ...gameState.hands, [targetUid]: newHand },
-                lastPlayed: newLastPlayed,
-                lastPlayer: newLastPlayer,
-                currentTurn: getNextTurn(targetUid),
-                lastActionTime: Date.now()
+                ...gameState, hands: { ...gameState.hands, [targetUid]: newHand },
+                lastPlayed: newLastPlayed, lastPlayer: newLastPlayer, currentTurn: nextTurn,
+                lastActionTime: Date.now(), eventMessage: eventMsg, lastEventTime: eventTime
             });
         }
 
@@ -557,14 +656,16 @@
                 if (myPlay.type === 5) {
                     if (myPlay.subType < lastPlay.subType) return alert(`牌型太小！`);
                     if (myPlay.subType === lastPlay.subType && myPlay.power <= lastPlay.power) return alert("點數沒有比較大！");
-                } else {
-                    if (myPlay.power <= lastPlay.power) return alert("點數沒有比較大！");
-                }
+                } else { if (myPlay.power <= lastPlay.power) return alert("點數沒有比較大！"); }
             }
+            selectedCards = []; currentHintType = '';
             await executeAction(false, selectedCards, myUid);
         };
 
-        ui.btnPass.onclick = async () => { await executeAction(true, [], myUid); };
+        ui.btnPass.onclick = async () => { 
+            selectedCards = []; currentHintType = ''; 
+            await executeAction(true, [], myUid); 
+        };
 
         ui.btnCancelAfk.onclick = async () => {
             let afkPlayers = gameState.afkPlayers || [];
@@ -573,12 +674,11 @@
         };
 
         function endGame(isSpectator) {
-            ui.gameBoard.style.opacity = '0.8';
-            ui.btnPlay.disabled = true; ui.btnPass.disabled = true;
-            ui.afkOverlay.style.display = 'none';
+            ui.gameBoard.style.opacity = '0.8'; ui.btnPlay.disabled = true; ui.btnPass.disabled = true;
+            ui.afkOverlay.style.display = 'none'; ui.hintArea.innerHTML = '';
             if (!isSpectator && gameState.players[0] === myUid) {
-                ui.btnStart.style.display = 'inline-block';
-                ui.btnStart.innerText = "重新開局";
+                ui.hostSettings.style.display = 'flex';
+                ui.btnStart.disabled = false;
             }
         }
 
@@ -587,11 +687,18 @@
             clockInterval = setInterval(async () => {
                 if (!gameState || gameState.status !== 'playing') return;
                 
+                // 檢查是否選擇了「無限制 (0)」
+                if (gameState.timeLimit === 0) {
+                    ui.timerDisplay.style.display = 'none';
+                    return; // 關閉掛機判斷
+                }
+
                 let elapsed = Date.now() - gameState.lastActionTime;
-                let left = 15 - Math.floor(elapsed / 1000);
+                let left = gameState.timeLimit - Math.floor(elapsed / 1000);
                 if (left >= 0) ui.timerDisplay.innerText = `⏳ ${left}s`;
 
-                if (elapsed > 15000) {
+                // 觸發超時自動託管
+                if (elapsed > gameState.timeLimit * 1000) {
                     let targetUid = gameState.currentTurn;
                     let afkPlayers = gameState.afkPlayers || [];
                     
@@ -600,7 +707,7 @@
                         await setDoc(doc(db, "games", currentRoomId), { ...gameState, afkPlayers });
                         autoPlayFor(myUid);
                     } 
-                    else if (elapsed > 18000) {
+                    else if (elapsed > (gameState.timeLimit + 3) * 1000) {
                         let nextTurn = getNextTurn(targetUid);
                         if (myUid === nextTurn) { 
                             if (!afkPlayers.includes(targetUid)) afkPlayers.push(targetUid);
@@ -618,9 +725,7 @@
                 let hand = gameState.hands[uid];
                 if(hand && hand.length > 0) await executeAction(false, [hand[0]], uid);
                 else await executeAction(true, [], uid);
-            } else {
-                await executeAction(true, [], uid);
-            }
+            } else { await executeAction(true, [], uid); }
         }
     </script>
 </body>
