@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大老二 (Big Two) - 智能推薦競技版</title>
+    <title>大老二 (Big Two) - 智能競技版 v2</title>
     <style>
         body {
             background-color: #277714; color: white;
@@ -14,6 +14,7 @@
         }
         #top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
         h2 { margin: 0; font-size: 18px; }
+        .version-tag { font-size: 11px; background: #dc3545; padding: 2px 5px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
         
         #lobby {
             display: flex; flex-direction: column; align-items: center; justify-content: flex-start;
@@ -65,7 +66,7 @@
         #my-hand .card:first-child { margin-left: 0; }
 
         /* 智能選牌推薦區 */
-        #hint-area { display: flex; justify-content: center; align-items: center; gap: 5px; margin-bottom: 8px; min-height: 28px; }
+        #hint-area { display: flex; justify-content: center; align-items: center; gap: 5px; margin-bottom: 8px; min-height: 28px; flex-wrap: wrap; }
         .hint-btn { background-color: #17a2b8; color: white; padding: 4px 10px; font-size: 13px; border: none; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .hint-btn:hover { background-color: #138496; }
 
@@ -99,7 +100,7 @@
 <body>
 
     <div id="top-bar">
-        <h2 id="room-display">大老二競技場</h2>
+        <h2 id="room-display">大老二競技場<span class="version-tag">v2.0</span></h2>
         <button id="btn-reset" class="btn-danger" style="display:none;">離開房間</button>
     </div>
     
@@ -252,13 +253,10 @@
             function helper(start, combo) {
                 if (combo.length === k) { results.push([...combo]); return; }
                 for (let i = start; i < arr.length; i++) {
-                    combo.push(arr[i]);
-                    helper(i + 1, combo);
-                    combo.pop();
+                    combo.push(arr[i]); helper(i + 1, combo); combo.pop();
                 }
             }
-            helper(0, []);
-            return results;
+            helper(0, []); return results;
         }
 
         function analyzeHand(cards) {
@@ -302,7 +300,6 @@
                     if(cards[i].rank === cards[j].rank) hints['一對'].push([cards[i], cards[j]]);
                 }
             }
-
             if(cards.length >= 5) {
                 let combos5 = getCombinations(cards, 5);
                 for(let combo of combos5) {
@@ -316,14 +313,11 @@
                     }
                 }
             }
-            // 依照戰力由小到大排序，方便循環切換時先出小的
-            for(let key in hints) {
-                hints[key].sort((a,b) => analyzeHand(a).power - analyzeHand(b).power);
-            }
+            for(let key in hints) hints[key].sort((a,b) => analyzeHand(a).power - analyzeHand(b).power);
             return hints;
         }
 
-        // ================= Firebase 與流程控制 =================
+        // ================= Firebase 登入與大廳 =================
         signInAnonymously(auth).then((userCred) => {
             myUid = userCred.user.uid;
             ui.btnJoin.disabled = false;
@@ -341,8 +335,7 @@
                     let data = docSnap.data();
                     let roomId = docSnap.id;
                     if (!data.lastActionTime || (now - data.lastActionTime > 120000) || !data.players || data.players.length === 0) {
-                        deleteDoc(doc(db, "games", roomId)).catch(e => console.log(e));
-                        return; 
+                        deleteDoc(doc(db, "games", roomId)).catch(e => console.log(e)); return; 
                     }
                     hasRooms = true;
                     let displayId = roomId.replace('room_', '');
@@ -394,15 +387,14 @@
             if(unsubscribeRoom) unsubscribeRoom();
             if(clockInterval) clearInterval(clockInterval);
             currentRoomId = null; gameState = null;
-            ui.gameBoard.style.display = 'none';
-            ui.btnReset.style.display = 'none';
-            ui.lobby.style.display = 'flex';
-            ui.spectatorBanner.style.display = 'none';
-            ui.roomDisplay.innerText = "大老二競技場";
+            ui.gameBoard.style.display = 'none'; ui.btnReset.style.display = 'none';
+            ui.lobby.style.display = 'flex'; ui.spectatorBanner.style.display = 'none';
+            ui.roomDisplay.innerHTML = `大老二競技場<span class="version-tag">v2.0</span>`;
             ui.statusMsg.innerText = "已離開房間。";
             listenToLobby(); 
         }
 
+        // ================= 遊戲核心連線 =================
         async function connectToRoom() {
             const roomRef = doc(db, "games", currentRoomId);
             unsubscribeRoom = onSnapshot(roomRef, async (snapshot) => {
@@ -516,10 +508,9 @@
             }
 
             ui.afkOverlay.style.display = afkPlayers.includes(myUid) ? 'flex' : 'none';
-
             myCardsGlobal = (!isSpectator && gameState.hands && gameState.hands[myUid]) ? gameState.hands[myUid] : [];
             
-            // Render Opponents
+            // 渲染對手
             ui.opponentsArea.innerHTML = '';
             gameState.players.forEach((pUid) => {
                 if(pUid === myUid && !isSpectator) return; 
@@ -538,14 +529,14 @@
                 ui.opponentsArea.appendChild(oppDiv);
             });
 
-            // Cache Smart Hints
+            // 渲染智能推薦與自己的手牌
             if (!isSpectator) {
                 cachedHints = findAllHints(myCardsGlobal);
                 renderHintButtons();
             }
             renderMyHand(isSpectator, isMyTurn, afkPlayers);
 
-            // Render Play Area
+            // 渲染出牌區
             ui.playArea.innerHTML = '';
             if (gameState.lastPlayer === gameState.currentTurn && isActiveTurnReady()) {
                 ui.playArea.innerHTML = '<span style="color:#ffcc00; font-weight:bold;">新回合自由出牌！</span>';
@@ -555,7 +546,7 @@
                 ui.playArea.innerHTML = '<span style="color:#aaa;">首局，由包含最小牌者先出</span>';
             }
 
-            // Win Condition
+            // 勝利判定
             if (gameState.hands && Object.keys(gameState.hands).length > 0) {
                 let winnerIndex = gameState.players.findIndex(p => gameState.hands[p] && gameState.hands[p].length === 0);
                 if (winnerIndex !== -1) {
@@ -568,7 +559,7 @@
             }
         }
 
-        // ================= UI 渲染切割 (手牌 & 提示按鈕) =================
+        // ================= 介面渲染與出牌邏輯 =================
         function renderHintButtons() {
             ui.hintArea.innerHTML = '';
             let hasHints = false;
@@ -601,7 +592,7 @@
                     if (selectedCards.some(c => c.value === card.value)) {
                         selectedCards = selectedCards.filter(c => c.value !== card.value);
                     } else { selectedCards.push(card); }
-                    renderMyHand(isSpectator, isMyTurn, afkPlayers); // 局部更新UI
+                    renderMyHand(isSpectator, isMyTurn, afkPlayers);
                 };
                 ui.myHand.appendChild(cardDiv);
             });
@@ -658,8 +649,11 @@
                     if (myPlay.subType === lastPlay.subType && myPlay.power <= lastPlay.power) return alert("點數沒有比較大！");
                 } else { if (myPlay.power <= lastPlay.power) return alert("點數沒有比較大！"); }
             }
+            
+            // 🔥 BUG 修正：複製陣列避免被清空
+            let cardsToPlay = [...selectedCards];
             selectedCards = []; currentHintType = '';
-            await executeAction(false, selectedCards, myUid);
+            await executeAction(false, cardsToPlay, myUid);
         };
 
         ui.btnPass.onclick = async () => { 
@@ -679,6 +673,7 @@
             if (!isSpectator && gameState.players[0] === myUid) {
                 ui.hostSettings.style.display = 'flex';
                 ui.btnStart.disabled = false;
+                ui.btnStart.innerText = "重新開局";
             }
         }
 
@@ -687,17 +682,15 @@
             clockInterval = setInterval(async () => {
                 if (!gameState || gameState.status !== 'playing') return;
                 
-                // 檢查是否選擇了「無限制 (0)」
                 if (gameState.timeLimit === 0) {
                     ui.timerDisplay.style.display = 'none';
-                    return; // 關閉掛機判斷
+                    return; 
                 }
 
                 let elapsed = Date.now() - gameState.lastActionTime;
                 let left = gameState.timeLimit - Math.floor(elapsed / 1000);
                 if (left >= 0) ui.timerDisplay.innerText = `⏳ ${left}s`;
 
-                // 觸發超時自動託管
                 if (elapsed > gameState.timeLimit * 1000) {
                     let targetUid = gameState.currentTurn;
                     let afkPlayers = gameState.afkPlayers || [];
