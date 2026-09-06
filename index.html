@@ -3,16 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>大老二 (Big Two) - 智能競技版 v2</title>
+    <title>大老二 (Big Two) - 智能競技版 v2.2</title>
     <style>
         body {
             background-color: #277714; color: white;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             text-align: center; margin: 0; padding: 10px;
-            display: flex; flex-direction: column; height: 100vh;
+            display: flex; flex-direction: column; 
+            /* 修正手機瀏覽器網址列吃掉畫面的問題 */
+            height: 100vh; height: 100dvh; 
             box-sizing: border-box; overflow: hidden;
         }
-        #top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; }
+        #top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px; flex-shrink: 0; }
         h2 { margin: 0; font-size: 18px; }
         .version-tag { font-size: 11px; background: #dc3545; padding: 2px 5px; border-radius: 4px; margin-left: 5px; vertical-align: middle; }
         
@@ -36,9 +38,9 @@
         .tag-waiting { color: #4CAF50; font-weight: bold; }
         .tag-playing { color: #ff9800; font-weight: bold; }
 
-        #game-board { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; position: relative; }
+        #game-board { flex-grow: 1; display: flex; flex-direction: column; justify-content: space-between; position: relative; overflow: hidden; }
         
-        #opponents-area { display: flex; justify-content: space-around; width: 100%; margin-bottom: 5px; }
+        #opponents-area { display: flex; justify-content: space-around; width: 100%; margin-bottom: 5px; flex-shrink: 0; }
         .opponent-box { background: rgba(0,0,0,0.2); padding: 5px 10px; border-radius: 10px; display: flex; flex-direction: column; align-items: center; transition: 0.3s; border: 2px solid transparent; width: 80px; }
         .opponent-box.active { border: 2px solid #ffcc00; background: rgba(255, 204, 0, 0.2); box-shadow: 0 0 10px #ffcc00; }
         .opponent-box.afk { border: 2px solid #ff5555; background: rgba(255, 0, 0, 0.2); opacity: 0.8; }
@@ -47,36 +49,56 @@
         .mini-card { width: 20px; height: 30px; background-color: #b22222; background-image: repeating-linear-gradient(45deg, transparent, transparent 4px, rgba(255,255,255,0.1) 4px, rgba(255,255,255,0.1) 8px); border: 1px solid #777; border-radius: 3px; margin-left: -12px; box-shadow: -1px 1px 2px rgba(0,0,0,0.5); }
         .mini-card:first-child { margin-left: 0; }
         
-        #play-area { flex-grow: 1; display: flex; justify-content: center; align-items: center; border: 2px dashed rgba(255,255,255,0.3); border-radius: 10px; margin: 5px 0; min-height: 100px; background: rgba(0,0,0,0.1); position: relative; }
+        /* 出牌區允許被壓縮，以保證手牌區的空間 */
+        #play-area { 
+            flex-grow: 1; flex-shrink: 1; 
+            display: flex; justify-content: center; align-items: center; 
+            border: 2px dashed rgba(255,255,255,0.3); border-radius: 10px; 
+            margin: 5px 0; min-height: 80px; background: rgba(0,0,0,0.1); position: relative; 
+        }
         
-        .card { width: 60px; height: 90px; background-color: white; border: 1px solid #999; border-radius: 6px; display: flex; justify-content: center; align-items: center; font-size: 20px; font-weight: bold; color: black; cursor: pointer; box-shadow: -2px 2px 5px rgba(0,0,0,0.3); transition: transform 0.2s, margin 0.2s; user-select: none; flex-shrink: 0; position: relative; }
+        .card { 
+            width: 60px; height: 90px; background-color: white; border: 1px solid #999; border-radius: 6px; 
+            color: black; cursor: pointer; box-shadow: -2px 2px 5px rgba(0,0,0,0.3); 
+            transition: transform 0.2s, margin 0.2s; user-select: none; flex-shrink: 0; position: relative; 
+        }
         .card.red { color: #d32f2f; }
         .card:hover { transform: translateY(-10px); z-index: 10; }
         .card.selected { transform: translateY(-20px) !important; border: 2px solid #ffcc00; box-shadow: 0 0 10px #ffcc00; z-index: 20; }
         
+        .card-value { position: absolute; top: 3px; left: 5px; display: flex; flex-direction: column; align-items: center; font-size: 18px; font-weight: bold; line-height: 1; }
+        .card-suit-center { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 35px; opacity: 0.15; pointer-events: none; }
+
         #play-area .card { margin-left: -15px; }
         #play-area .card:first-child { margin-left: 0; }
 
-        .my-hand-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; padding-bottom: 5px; }
+        /* 玩家操作區：絕對不允許壓縮 (flex-shrink: 0) */
+        #my-play-area { flex-shrink: 0; width: 100%; display: flex; flex-direction: column; }
+
+        /* 手牌容器：強制保證最低高度，防止底部被吃掉 */
+        .my-hand-container { 
+            width: 100%; overflow-x: auto; overflow-y: hidden; 
+            -webkit-overflow-scrolling: touch; padding-bottom: 15px; 
+            min-height: 135px; 
+        }
         .my-hand-container::-webkit-scrollbar { height: 6px; }
         .my-hand-container::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 10px; }
         
-        #my-hand { display: inline-flex; padding: 25px 15px 10px 15px; }
-        #my-hand .card { margin-left: -20px; }
+        #my-hand { display: inline-flex; padding: 25px 15px 5px 15px; align-items: flex-end; }
+        #my-hand .card { margin-left: -12px; }
         #my-hand .card:first-child { margin-left: 0; }
 
-        /* 智能選牌推薦區 */
-        #hint-area { display: flex; justify-content: center; align-items: center; gap: 5px; margin-bottom: 8px; min-height: 28px; flex-wrap: wrap; }
+        #hint-area { display: flex; justify-content: center; align-items: center; gap: 5px; margin-bottom: 5px; min-height: 28px; flex-wrap: wrap; flex-shrink: 0; }
         .hint-btn { background-color: #17a2b8; color: white; padding: 4px 10px; font-size: 13px; border: none; border-radius: 4px; cursor: pointer; box-shadow: 0 2px 4px rgba(0,0,0,0.2); }
         .hint-btn:hover { background-color: #138496; }
 
-        #controls { margin-bottom: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap;}
+        #controls { margin-bottom: 5px; display: flex; justify-content: center; align-items: center; gap: 8px; flex-wrap: wrap; flex-shrink: 0;}
         button { padding: 8px 14px; font-size: 15px; cursor: pointer; border: none; border-radius: 6px; background-color: #ffcc00; color: #333; font-weight: bold; box-shadow: 0 4px 6px rgba(0,0,0,0.2); }
         button:disabled { background-color: #666; color: #999; cursor: not-allowed; box-shadow: none; }
         .btn-danger { background-color: #dc3545; color: white; padding: 6px 12px; font-size: 13px; }
         select { padding: 8px; border-radius: 6px; font-size: 14px; font-weight: bold; background: #fff; color: #333; border: none; margin-bottom: 5px; }
         
-        #status-msg { font-size: 15px; font-weight: bold; color: #ffeb3b; margin-bottom: 5px; }
+        #status-msg { font-size: 15px; font-weight: bold; color: #ffeb3b; margin-bottom: 5px; flex-shrink: 0; }
         #timer-display { font-size: 18px; font-weight: bold; color: #ff5555; background: rgba(0,0,0,0.5); padding: 2px 8px; border-radius: 5px; }
 
         #afk-overlay { display: none; position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 100; flex-direction: column; justify-content: center; align-items: center; border-radius: 10px; }
@@ -91,16 +113,20 @@
             100% { transform: translate(-50%, -50%) scale(1.2); opacity: 0; }
         }
 
+        /* 手機版視窗特別適應 */
         @media (max-width: 600px) {
-            .card { width: 55px; height: 80px; font-size: 18px; }
+            .card { width: 55px; height: 80px; }
+            .card-value { font-size: 16px; top: 2px; left: 4px; }
+            .card-suit-center { font-size: 30px; }
             .card.selected { transform: translateY(-15px) !important; }
+            .my-hand-container { min-height: 125px; }
         }
     </style>
 </head>
 <body>
 
     <div id="top-bar">
-        <h2 id="room-display">大老二競技場<span class="version-tag">v2.0</span></h2>
+        <h2 id="room-display">大老二競技場<span class="version-tag">v2.2</span></h2>
         <button id="btn-reset" class="btn-danger" style="display:none;">離開房間</button>
     </div>
     
@@ -139,7 +165,6 @@
             <div id="controls">
                 <span id="timer-display" style="display:none;">⏳ 15s</span>
                 
-                <!-- 房主設定區 -->
                 <div id="host-settings" style="display:none; flex-wrap:wrap; justify-content:center; gap:5px;">
                     <select id="time-limit-select">
                         <option value="15">⏱️ 限時 15 秒</option>
@@ -157,9 +182,9 @@
                 <button id="btn-pass" disabled>Pass</button>
             </div>
             
-            <!-- 智能推薦按鈕區 -->
             <div id="hint-area"></div>
             
+            <div style="font-size: 12px; margin-bottom: 2px; color: #aaa; flex-shrink: 0;" id="hand-label">你的牌 (左右滑動)</div>
             <div class="my-hand-container">
                 <div id="my-hand"></div>
             </div>
@@ -222,7 +247,8 @@
             hostSettings: document.getElementById('host-settings'),
             gameModeSelect: document.getElementById('game-mode-select'),
             timeLimitSelect: document.getElementById('time-limit-select'),
-            hintArea: document.getElementById('hint-area')
+            hintArea: document.getElementById('hint-area'),
+            handLabel: document.getElementById('hand-label')
         };
 
         const suits = ['♣', '♦', '♥', '♠'];
@@ -247,7 +273,6 @@
             setTimeout(() => toast.remove(), 3000);
         }
 
-        // ================= 智能手牌分析器 (Smart Combinations) =================
         function getCombinations(arr, k) {
             let results = [];
             function helper(start, combo) {
@@ -317,7 +342,6 @@
             return hints;
         }
 
-        // ================= Firebase 登入與大廳 =================
         signInAnonymously(auth).then((userCred) => {
             myUid = userCred.user.uid;
             ui.btnJoin.disabled = false;
@@ -389,12 +413,11 @@
             currentRoomId = null; gameState = null;
             ui.gameBoard.style.display = 'none'; ui.btnReset.style.display = 'none';
             ui.lobby.style.display = 'flex'; ui.spectatorBanner.style.display = 'none';
-            ui.roomDisplay.innerHTML = `大老二競技場<span class="version-tag">v2.0</span>`;
+            ui.roomDisplay.innerHTML = `大老二競技場<span class="version-tag">v2.2</span>`;
             ui.statusMsg.innerText = "已離開房間。";
             listenToLobby(); 
         }
 
-        // ================= 遊戲核心連線 =================
         async function connectToRoom() {
             const roomRef = doc(db, "games", currentRoomId);
             unsubscribeRoom = onSnapshot(roomRef, async (snapshot) => {
@@ -442,7 +465,8 @@
             ui.gameBoard.style.display = 'flex';
             let isSpectator = spectators.includes(myUid);
             ui.spectatorBanner.style.display = isSpectator ? 'block' : 'none';
-            ui.myPlayArea.style.display = isSpectator ? 'none' : 'block';
+            ui.myPlayArea.style.display = isSpectator ? 'none' : 'flex';
+            ui.handLabel.innerText = `${myName}，你的牌 (可左右滑動)`;
 
             let modeDisplay = (gameState.mode === 'chong3') ? '🔥衝三' : '經典';
             let timeDisplay = (gameState.timeLimit > 0) ? `⏱️${gameState.timeLimit}s` : '☕無時限';
@@ -510,7 +534,6 @@
             ui.afkOverlay.style.display = afkPlayers.includes(myUid) ? 'flex' : 'none';
             myCardsGlobal = (!isSpectator && gameState.hands && gameState.hands[myUid]) ? gameState.hands[myUid] : [];
             
-            // 渲染對手
             ui.opponentsArea.innerHTML = '';
             gameState.players.forEach((pUid) => {
                 if(pUid === myUid && !isSpectator) return; 
@@ -529,14 +552,12 @@
                 ui.opponentsArea.appendChild(oppDiv);
             });
 
-            // 渲染智能推薦與自己的手牌
             if (!isSpectator) {
                 cachedHints = findAllHints(myCardsGlobal);
                 renderHintButtons();
             }
             renderMyHand(isSpectator, isMyTurn, afkPlayers);
 
-            // 渲染出牌區
             ui.playArea.innerHTML = '';
             if (gameState.lastPlayer === gameState.currentTurn && isActiveTurnReady()) {
                 ui.playArea.innerHTML = '<span style="color:#ffcc00; font-weight:bold;">新回合自由出牌！</span>';
@@ -546,7 +567,6 @@
                 ui.playArea.innerHTML = '<span style="color:#aaa;">首局，由包含最小牌者先出</span>';
             }
 
-            // 勝利判定
             if (gameState.hands && Object.keys(gameState.hands).length > 0) {
                 let winnerIndex = gameState.players.findIndex(p => gameState.hands[p] && gameState.hands[p].length === 0);
                 if (winnerIndex !== -1) {
@@ -559,7 +579,23 @@
             }
         }
 
-        // ================= 介面渲染與出牌邏輯 =================
+        // ================= 全新撲克牌設計 =================
+        function createCardElement(card) {
+            let div = document.createElement('div');
+            div.className = 'card';
+            if (card.suit === '♥' || card.suit === '♦') div.classList.add('red');
+            
+            // 左上角標示 + 中央半透明浮水印
+            div.innerHTML = `
+                <div class="card-value">
+                    <span>${card.rank}</span>
+                    <span style="font-size: 0.8em;">${card.suit}</span>
+                </div>
+                <div class="card-suit-center">${card.suit}</div>
+            `;
+            return div;
+        }
+
         function renderHintButtons() {
             ui.hintArea.innerHTML = '';
             let hasHints = false;
@@ -578,7 +614,7 @@
                     ui.hintArea.appendChild(btn);
                 }
             }
-            if(!hasHints && myCardsGlobal.length > 0) ui.hintArea.innerHTML = '<span style="color:#aaa; font-size:12px;">無特殊組合牌型</span>';
+            if(!hasHints && myCardsGlobal.length > 0) ui.hintArea.innerHTML = '<span style="color:#aaa; font-size:12px;">無特殊組合</span>';
         }
 
         function renderMyHand(isSpectator, isMyTurn, afkPlayers) {
@@ -596,14 +632,6 @@
                 };
                 ui.myHand.appendChild(cardDiv);
             });
-        }
-
-        function createCardElement(card) {
-            let div = document.createElement('div');
-            div.className = 'card';
-            if (card.suit === '♥' || card.suit === '♦') div.classList.add('red');
-            div.innerHTML = `${card.suit}<br>${card.rank}`;
-            return div;
         }
 
         function getNextTurn(currentUid) {
@@ -650,7 +678,6 @@
                 } else { if (myPlay.power <= lastPlay.power) return alert("點數沒有比較大！"); }
             }
             
-            // 🔥 BUG 修正：複製陣列避免被清空
             let cardsToPlay = [...selectedCards];
             selectedCards = []; currentHintType = '';
             await executeAction(false, cardsToPlay, myUid);
